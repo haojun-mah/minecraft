@@ -29,15 +29,16 @@ public final class BuildHud implements HudElement {
         if (msg.isEmpty()) return;
 
         int sw = mc.getWindow().getGuiScaledWidth();
-        int sh = mc.getWindow().getGuiScaledHeight();
-        int barY = sh - 22;
 
-        g.fill(0, barY, sw, sh, BG);
-        g.centeredText(mc.font, msg, sw / 2, barY + 6, 0xFFFFFF);
-
+        // Progress bar strip at very top
         float progress = state.getOverallProgress();
         int filled = (int) (progress * sw);
+        g.fill(0, 0, sw, 3, 0xFF222222);
         if (filled > 0)
-            g.fill(0, sh - 2, filled, sh, ACCENT);
+            g.fill(0, 0, filled, 3, ACCENT);
+
+        // Stage label just below the bar
+        g.fill(0, 3, sw, 16, BG);
+        g.centeredText(mc.font, msg, sw / 2, 4, 0xFFFFFF);
     }
 }

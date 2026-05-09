@@ -303,23 +303,29 @@ public class ArchitectScreen extends Screen {
 
         super.extractRenderState(g, mx, my, delta);
 
-        // Status
-        String displayStatus = generating
-                ? BuildState.INSTANCE.getStatusMessage()
-                : statusMessage;
-        if (!displayStatus.isEmpty())
-            g.centeredText(font, displayStatus, width / 2, py + 160, 0xAAAAAA);
+        // Progress bar + stage label — always shown while active
+        if (generating || BuildState.INSTANCE.isActive()) {
+            BuildState state  = BuildState.INSTANCE;
+            float      prog   = state.getOverallProgress();
+            String     stage  = generating ? state.getStatusMessage() : statusMessage;
 
-        // Progress bar
-        int barTotal = "placing".equals(BuildState.INSTANCE.getPhase()) ? BuildState.INSTANCE.getTotal() : total;
-        if (barTotal > 0) {
-            float prog = BuildState.INSTANCE.getOverallProgress();
-            int bx = px + 10, by = py + 173, bw = PANEL_W - 20;
+            int bx = px + 10, bw = PANEL_W - 20;
+            int barY = py + 170;
+
+            // Dark track
+            g.fill(bx, barY, bx + bw, barY + 12, 0xFF222222);
+            // Filled portion
             int filled = (int) (prog * bw);
-            g.fill(bx, by, bx + bw, by + 6, 0xFF222222);
-            g.fill(bx, by, bx + filled, by + 6, ACCENT);
+            if (filled > 0)
+                g.fill(bx, barY, bx + filled, barY + 12, ACCENT);
+            // Leading edge highlight
             if (filled > 0 && filled < bw)
-                g.fill(bx + filled, by, bx + filled + 1, by + 6, 0xFFFFFFFF);
+                g.fill(bx + filled, barY, bx + filled + 1, barY + 12, 0xFFFFFFFF);
+            // Stage text centered on the bar
+            if (!stage.isEmpty())
+                g.centeredText(font, stage, width / 2, barY + 2, 0xFFFFFF);
+        } else if (!statusMessage.isEmpty()) {
+            g.centeredText(font, statusMessage, width / 2, py + 173, 0xAAAAAA);
         }
     }
 

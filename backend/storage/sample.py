@@ -39,7 +39,14 @@ def _build_sample_grid() -> list[list[list[int]]]:
     return grid
 
 
-def build_sample_response(*, job_id: str, prompt: str) -> BuildResult:
+def build_sample_response(
+    *,
+    job_id: str,
+    prompt: str,
+    input_image_url: str | None = None,
+    hero_image_url: str | None = None,
+    preview_image_url: str | None = None,
+) -> BuildResult:
     grid = _build_sample_grid()
     encoded = encode_rle_zyx(grid, SAMPLE_SIZE)
     return BuildResult(
@@ -50,6 +57,7 @@ def build_sample_response(*, job_id: str, prompt: str) -> BuildResult:
         palette=SAMPLE_PALETTE,
         blocks=encoded,
         encoding="rle-z-y-x",
-        hero_image_url=None,
-        preview_image_url=None,
+        hero_image_url=hero_image_url,
+        preview_image_url=preview_image_url,
+        input_image_url=input_image_url,
     )

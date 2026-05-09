@@ -31,6 +31,10 @@ class BuildRequest(BaseModel):
         description="Optional style hint, e.g. 'blocky low-poly', 'realistic'.",
     )
     seed: int | None = Field(None, description="Optional seed for reproducibility.")
+    input_image_url: str | None = Field(
+        None,
+        description="Optional static URL for an uploaded source image.",
+    )
 
 
 class BuildEnqueued(BaseModel):
@@ -75,3 +79,4 @@ class BuildResult(BaseModel):
     )
     hero_image_url: str | None = None
     preview_image_url: str | None = None
+    input_image_url: str | None = None

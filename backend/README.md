@@ -1,12 +1,12 @@
 # Minecraft AI Backend
 
-Generative-AI backend that turns a text prompt into a Minecraft block structure. Sends back a compact JSON the frontend mod renders into the world.
+Generative-AI backend that turns a text prompt or an uploaded image into a Minecraft block structure. Sends back a compact JSON the frontend mod renders into the world.
 
 This document is the **API contract** your frontend mod consumes. The backend's pipeline (Exa research, GPT-4o vision planning, Fal Flux image generation, Fal Trellis image-to-3D, voxelization, block-mapping) is invisible to you.
 
 ## Phase 1 status
 
-The pipeline is **stubbed**: `POST /builds` accepts a real request, walks through the same status stages the real pipeline will, and after a few seconds returns a hard-coded sample response (a small 5x5x5 cottage). This lets the frontend be built and tested end-to-end before the real generative pipeline lands.
+The pipeline is **stubbed**: `POST /builds` accepts a real request, walks through the same status stages the real pipeline will, and after a few seconds returns a hard-coded sample response (a small 5x5x5 cottage). `POST /builds/from-image` does the same thing for an uploaded image and stores the upload under `artifacts/` so the frontend can show it immediately. This lets the frontend be built and tested end-to-end before the real generative pipeline lands.
 
 A frozen example is committed at [`examples/sample_response.json`](examples/sample_response.json) so the renderer can be developed without running the server at all.
 
@@ -60,6 +60,22 @@ Response (`202 Accepted`):
 { "job_id": "j_abc123", "status": "queued" }
 ```
 
+### `POST /builds/from-image`
+
+Upload an image as `multipart/form-data`. `prompt` is optional and can be used as a hint for naming or logging.
+
+Form fields:
+- `image` — required file upload
+- `prompt` — optional text hint
+- `style_hint` — optional text hint
+- `seed` — optional integer seed
+- `max_size` — optional JSON array string like `[48,48,48]`
+
+Response (`202 Accepted`):
+```json
+{ "job_id": "j_abc123", "status": "queued" }
+```
+
 ### `GET /builds/{job_id}`
 
 Poll for status. While running, you get progress updates:
@@ -93,11 +109,13 @@ When `status == "done"`, the response is the **final build result**:
   "blocks": "BASE64_STRING",
   "encoding": "rle-z-y-x",
   "hero_image_url": null,
-  "preview_image_url": null
+  "preview_image_url": null,
+  "input_image_url": null
 }
 ```
 
-`hero_image_url` and `preview_image_url` are `null` in Phase 1; they'll point to `/static/...` PNGs once the real pipeline ships.
+For text builds in Phase 1, `hero_image_url`, `preview_image_url`, and `input_image_url` are `null`.
+For image uploads, `input_image_url` points at the saved source image under `/static/...`, and `hero_image_url` currently reuses that same static URL in the stub so the frontend can preview the upload immediately.
 
 ### `GET /healthz`
 

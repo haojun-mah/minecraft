@@ -1,0 +1,25 @@
+{
+  "job_id": "j_sample01",
+  "status": "done",
+  "prompt": "a small medieval cottage with a thatched roof",
+  "size": [
+    5,
+    5,
+    5
+  ],
+  "origin": [
+    0,
+    0,
+    0
+  ],
+  "palette": [
+    "minecraft:air",
+    "minecraft:cobblestone",
+    "minecraft:oak_planks",
+    "minecraft:hay_block"
+  ],
+  "blocks": "BQEKAgUDBQAFAQECAwACAgMAAQIFAwUABQEBAgMAAgIDAAECBQMFAAUBAQIDAAICAwABAgUDBQAFAQoCBQMFAA==",
+  "encoding": "rle-z-y-x",
+  "hero_image_url": null,
+  "preview_image_url": null
+}

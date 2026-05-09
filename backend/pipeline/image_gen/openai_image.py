@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import Any
 
 from config import Settings, get_settings
+from pipeline.research_types import ResearchBundle
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +27,11 @@ _OUTPUT_MIME_TYPES = {
 }
 
 
-def build_hero_prompt(prompt: str, style_hint: str | None = None) -> str:
+def build_hero_prompt(
+    prompt: str,
+    style_hint: str | None = None,
+    research_bundle: ResearchBundle | None = None,
+) -> str:
     """Turn the user prompt into an image-to-3D-friendly hero-image prompt."""
     parts: list[str] = []
     cleaned_prompt = prompt.strip()
@@ -36,11 +41,34 @@ def build_hero_prompt(prompt: str, style_hint: str | None = None) -> str:
         cleaned_style = style_hint.strip()
         if cleaned_style:
             parts.append(cleaned_style)
+    research_context = _build_research_context(research_bundle)
+    if research_context:
+        parts.append(research_context)
     parts.append(
         "three-quarter view, single isolated subject, plain white background, "
         "even studio lighting, no text, no people, no clutter, photorealistic"
     )
     return ", ".join(parts)
+
+
+def _build_research_context(research_bundle: ResearchBundle | None) -> str | None:
+    if research_bundle is None:
+        return None
+
+    lines: list[str] = []
+    for item in research_bundle.visual_descriptions[:5]:
+        description = " ".join(item.description.split())
+        if description:
+            lines.append(description)
+    for image in research_bundle.images[:4]:
+        description = " ".join(image.description.split())
+        if description and description not in lines:
+            lines.append(description)
+
+    if not lines:
+        return None
+    joined = " ".join(f"Reference detail: {line}" for line in lines)
+    return f"Use these Exa research findings as visual references. {joined}"
 
 
 def choose_hero_image_size(max_size: tuple[int, int, int]) -> str:

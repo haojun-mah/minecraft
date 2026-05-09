@@ -13,6 +13,7 @@ from pipeline.image_gen.openai_image import (
     build_hero_prompt,
     choose_hero_image_size,
 )
+from pipeline.research_types import ReferenceImage, ResearchBundle, VisualDescription
 
 
 class FakeImageClient:
@@ -71,3 +72,31 @@ async def test_openai_image_generator_writes_candidates_and_picks_best(tmp_path:
     assert image_client.calls[0]["quality"] == "medium"
     assert image_client.calls[0]["output_format"] == "png"
     assert ranker_client.calls[0]["model"] == "gpt-4.1-mini"
+
+
+def test_build_hero_prompt_includes_exa_research_context(tmp_path: Path):
+    bundle = ResearchBundle(
+        prompt="a medieval cottage",
+        visual_descriptions=[
+            VisualDescription(
+                description="Architectural visual detail: steep thatched roof and timber frame"
+            ),
+        ],
+        images=[
+            ReferenceImage(
+                path=tmp_path / "ref_0.jpg",
+                width=64,
+                height=64,
+                static_url="/static/j_test/refs/ref_0.jpg",
+                description="Architectural visual detail: pale plaster walls and stone base",
+            ),
+        ],
+    )
+
+    prompt = build_hero_prompt("a medieval cottage", "blocky low-poly", bundle)
+
+    assert "Use these Exa research findings as visual references" in prompt
+    assert "steep thatched roof and timber frame" in prompt
+    assert "pale plaster walls and stone base" in prompt
+    assert "blocky low-poly" in prompt
+    assert "plain white background" in prompt

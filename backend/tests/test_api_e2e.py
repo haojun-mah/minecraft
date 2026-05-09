@@ -34,6 +34,7 @@ async def test_full_build_flow(monkeypatch):
         *,
         job_id: str,
         request,
+        research_bundle,
         artifacts_dir: Path,
         http_request,
     ) -> tuple[str, Path]:

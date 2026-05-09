@@ -14,7 +14,6 @@ from urllib.parse import urlparse
 
 from api.schemas import BuildRequest
 from config import get_settings
-from pipeline.research import research
 from fastapi import Request
 from pipeline.generator3d.fal_trellis import FalTrellisGenerator3D
 from pipeline.image_gen.openai_image import (
@@ -59,32 +58,6 @@ async def run_pipeline(
     """
     try:
         if build_request.input_image_url:
-<<<<<<< HEAD
-            stages = _IMAGE_STAGES_PHASE1
-            store.update_status(job_id, status="running", stage=stages[0][0], progress=0.0)
-            await _simulate_pipeline(job_id, store, stages)
-        else:
-            settings = get_settings()
-            store.update_status(job_id, status="running", stage="research", progress=0.05)
-            bundle = await research(
-                request.prompt,
-                job_id=job_id,
-                artifacts_dir=artifacts_dir,
-                settings=settings,
-            )
-            logger.info(
-                "research complete",
-                extra={
-                    "job_id": job_id,
-                    "visual_descriptions": len(bundle.visual_descriptions),
-                    "images": len(bundle.images),
-                    "cached": bundle.cached,
-                },
-            )
-            store.update_status(job_id, status="running", stage="planning", progress=0.20)
-            await _simulate_pipeline(job_id, store, _TEXT_STAGES_AFTER_RESEARCH_PHASE1)
-
-=======
             hero_image_url = build_request.input_image_url
             source_image_path = _artifact_path_from_static_url(
                 build_request.input_image_url,
@@ -119,7 +92,6 @@ async def run_pipeline(
             await _update_stage(store, job_id, "block_mapping", 0.90, 0.3)
             await _update_stage(store, job_id, "encoding", 0.98, 0.2)
 
->>>>>>> refs/remotes/origin/backend
         result = build_sample_response(
             job_id=job_id,
             prompt=build_request.prompt,

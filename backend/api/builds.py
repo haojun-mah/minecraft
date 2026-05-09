@@ -35,6 +35,7 @@ def _start_pipeline(
     *,
     job_id: str,
     body: BuildRequest,
+    request: Request,
     store: JobStore,
     artifacts_dir: Path,
     tasks: set[asyncio.Task[None]],
@@ -44,7 +45,8 @@ def _start_pipeline(
     task = asyncio.create_task(
         run_pipeline(
             job_id=job_id,
-            request=body,
+            build_request=body,
+            http_request=request,
             store=store,
             artifacts_dir=artifacts_dir,
         ),
@@ -107,13 +109,21 @@ async def _save_image_upload(
 
 @router.post("", response_model=BuildEnqueued, status_code=202)
 async def create_build(
+    request: Request,
     body: BuildRequest,
     store: Annotated[JobStore, Depends(_store)],
     artifacts_dir: Annotated[Path, Depends(_artifacts_dir)],
     tasks: Annotated[set[asyncio.Task[None]], Depends(_task_set)],
 ) -> BuildEnqueued:
     job_id = "j_" + secrets.token_urlsafe(8)
-    _start_pipeline(job_id=job_id, body=body, store=store, artifacts_dir=artifacts_dir, tasks=tasks)
+    _start_pipeline(
+        job_id=job_id,
+        body=body,
+        request=request,
+        store=store,
+        artifacts_dir=artifacts_dir,
+        tasks=tasks,
+    )
     return BuildEnqueued(job_id=job_id, status="queued")
 
 
@@ -147,7 +157,14 @@ async def create_build_from_image(
         seed=seed,
         input_image_url=input_image_url,
     )
-    _start_pipeline(job_id=job_id, body=body, store=store, artifacts_dir=artifacts_dir, tasks=tasks)
+    _start_pipeline(
+        job_id=job_id,
+        body=body,
+        request=request,
+        store=store,
+        artifacts_dir=artifacts_dir,
+        tasks=tasks,
+    )
     return BuildEnqueued(job_id=job_id, status="queued")
 
 

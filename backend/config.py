@@ -27,7 +27,7 @@ class Settings(BaseSettings):
     exa_api_key: str | None = None
     fal_key: str | None = None
 
-    openai_image_model: str = "gpt-image-2"
+    openai_image_model: str = "gpt-image-1"
     openai_image_quality: Literal["low", "medium", "high", "auto"] = "medium"
     openai_image_output_format: Literal["png", "jpeg", "webp"] = "png"
     openai_image_background: Literal["opaque", "auto"] = "opaque"

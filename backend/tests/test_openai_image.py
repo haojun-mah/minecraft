@@ -65,7 +65,7 @@ async def test_openai_image_generator_writes_candidates_and_picks_best(tmp_path:
     assert hero_path.read_bytes() == b"candidate-one"
     assert (tmp_path / "hero_candidate_0.png").read_bytes() == b"candidate-zero"
     assert (tmp_path / "hero_candidate_1.png").read_bytes() == b"candidate-one"
-    assert image_client.calls[0]["model"] == "gpt-image-2"
+    assert image_client.calls[0]["model"] == "gpt-image-1"
     assert image_client.calls[0]["n"] == 2
     assert image_client.calls[0]["size"] == "1024x1024"
     assert image_client.calls[0]["quality"] == "medium"

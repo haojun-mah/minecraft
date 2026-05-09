@@ -1,26 +1,32 @@
 package com.example.network;
 
-import net.minecraft.network.PacketByteBuf;
-import net.minecraft.network.codec.PacketCodec;
-import net.minecraft.network.codec.PacketCodecs;
-import net.minecraft.network.packet.CustomPayload;
-import net.minecraft.util.Identifier;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.resources.ResourceLocation;
 
-public record BuildProgressPayload(int placed, int total, boolean done) implements CustomPayload {
+public record BuildProgressPayload(int placed, int total, boolean done)
+        implements CustomPacketPayload {
 
-    public static final Id<BuildProgressPayload> ID =
-            new Id<>(Identifier.of("modid", "build_progress"));
+    public static final Type<BuildProgressPayload> TYPE =
+            new Type<>(ResourceLocation.fromNamespaceAndPath("modid", "build_progress"));
 
-    public static final PacketCodec<PacketByteBuf, BuildProgressPayload> CODEC =
-            PacketCodec.tuple(
-                    PacketCodecs.VAR_INT, BuildProgressPayload::placed,
-                    PacketCodecs.VAR_INT, BuildProgressPayload::total,
-                    PacketCodecs.BOOL, BuildProgressPayload::done,
-                    BuildProgressPayload::new
+    public static final StreamCodec<RegistryFriendlyByteBuf, BuildProgressPayload> CODEC =
+            StreamCodec.ofMember(
+                    (buf, p) -> {
+                        buf.writeVarInt(p.placed());
+                        buf.writeVarInt(p.total());
+                        buf.writeBoolean(p.done());
+                    },
+                    buf -> new BuildProgressPayload(
+                            buf.readVarInt(),
+                            buf.readVarInt(),
+                            buf.readBoolean()
+                    )
             );
 
     @Override
-    public Id<? extends CustomPayload> getId() {
-        return ID;
+    public Type<? extends CustomPacketPayload> type() {
+        return TYPE;
     }
 }

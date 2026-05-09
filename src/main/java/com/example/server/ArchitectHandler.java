@@ -5,17 +5,18 @@ import com.example.network.BuildBlockEntry;
 import com.example.network.BuildBlocksPayload;
 import com.example.network.BuildProgressPayload;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
-import net.minecraft.block.Block;
-import net.minecraft.block.Blocks;
-import net.minecraft.registry.Registries;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.phys.Vec3;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -30,70 +31,66 @@ public class ArchitectHandler {
             });
 
     /**
-     * Receives the AI-generated block list from the client and places them
-     * block by block in the world, sending progress packets back.
+     * Receives the block list from the client (which got it from the AI backend)
+     * and places each block in the world one at a time, streaming progress back.
      *
-     * Block coordinates are relative to the player's feet position + 5 blocks
-     * in the direction they are looking.
+     * Blocks are placed relative to 5 blocks ahead of the player's look direction.
      */
     public static void handle(BuildBlocksPayload payload, ServerPlayNetworking.Context context) {
-        ServerPlayerEntity player = context.player();
-        List<BuildBlockEntry> entries = payload.blocks();
+        ServerPlayer player = context.player();
 
-        if (entries.isEmpty()) {
-            ExampleMod.LOGGER.warn("[AI Architect] Received empty block list from client.");
+        if (payload.blocks().isEmpty()) {
+            ExampleMod.LOGGER.warn("[AI Architect] Received empty block list — nothing to place.");
             return;
         }
 
         ExampleMod.LOGGER.info("[AI Architect] Placing {} blocks for {}",
-                entries.size(), player.getName().getString());
+                payload.blocks().size(), player.getName().getString());
 
-        // Anchor point: 5 blocks ahead of the player's look direction
-        Vec3d look = player.getRotationVec(1.0f);
-        int baseX = (int) Math.round(player.getX() + look.x * 5);
-        int baseY = (int) player.getY();
-        int baseZ = (int) Math.round(player.getZ() + look.z * 5);
+        // Anchor point: 5 blocks in front of where the player is looking
+        Vec3 look  = player.getLookAngle();
+        int baseX  = (int) Math.round(player.getX() + look.x * 5);
+        int baseY  = (int) player.getY();
+        int baseZ  = (int) Math.round(player.getZ() + look.z * 5);
 
-        List<PlacedBlock> blocks = resolveBlocks(entries, baseX, baseY, baseZ);
-        placeBlocksSequentially(player, blocks);
+        List<PlacedBlock> resolved = resolve(payload.blocks(), baseX, baseY, baseZ);
+        placeSequentially(player, resolved);
     }
 
     // -------------------------------------------------------------------------
-    // Internal helpers
-    // -------------------------------------------------------------------------
 
-    private static List<PlacedBlock> resolveBlocks(
+    private static List<PlacedBlock> resolve(
             List<BuildBlockEntry> entries, int baseX, int baseY, int baseZ) {
 
         List<PlacedBlock> out = new ArrayList<>(entries.size());
         for (BuildBlockEntry e : entries) {
-            BlockPos pos = new BlockPos(baseX + e.x(), baseY + e.y(), baseZ + e.z());
-            Block block = resolveBlock(e.block());
+            BlockPos pos   = new BlockPos(baseX + e.x(), baseY + e.y(), baseZ + e.z());
+            Block    block = lookupBlock(e.block());
             out.add(new PlacedBlock(pos, block));
         }
         return out;
     }
 
-    /** Looks up a block by its full registry name; falls back to stone bricks on unknown IDs. */
-    private static Block resolveBlock(String registryName) {
-        // Strip leading "minecraft:" if missing namespace
-        String name = registryName.contains(":") ? registryName : "minecraft:" + registryName;
-        Identifier id = Identifier.tryParse(name);
+    /** Looks up a block by full registry name; falls back to stone bricks on unknown IDs. */
+    private static Block lookupBlock(String name) {
+        String full = name.contains(":") ? name : "minecraft:" + name;
+        ResourceLocation id = ResourceLocation.tryParse(full);
         if (id == null) return Blocks.STONE_BRICKS;
-        Block block = Registries.BLOCK.get(id);
-        return (block == Blocks.AIR && !name.equals("minecraft:air")) ? Blocks.STONE_BRICKS : block;
+        Optional<Block> found = BuiltInRegistries.BLOCK.getOptional(id);
+        return found.orElse(Blocks.STONE_BRICKS);
     }
 
-    private static void placeBlocksSequentially(ServerPlayerEntity player, List<PlacedBlock> blocks) {
-        ServerWorld world = player.getServerWorld();
+    private static void placeSequentially(ServerPlayer player, List<PlacedBlock> blocks) {
+        ServerLevel level = (ServerLevel) player.level();
         int total = blocks.size();
 
         for (int i = 0; i < total; i++) {
-            final int idx = i;
+            final int       idx   = i;
             final PlacedBlock entry = blocks.get(idx);
+
             SCHEDULER.schedule(
-                    () -> world.getServer().execute(() -> {
-                        world.setBlockState(entry.pos(), entry.block().getDefaultState());
+                    () -> level.getServer().execute(() -> {
+                        level.setBlock(entry.pos(), entry.block().defaultBlockState(), 3);
                         ServerPlayNetworking.send(player, new BuildProgressPayload(
                                 idx + 1, total, idx == total - 1
                         ));

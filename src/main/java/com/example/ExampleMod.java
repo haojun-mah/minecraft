@@ -16,10 +16,10 @@ public class ExampleMod implements ModInitializer {
 
     @Override
     public void onInitialize() {
-        PayloadTypeRegistry.playC2S().register(BuildBlocksPayload.ID,  BuildBlocksPayload.CODEC);
-        PayloadTypeRegistry.playS2C().register(BuildProgressPayload.ID, BuildProgressPayload.CODEC);
+        PayloadTypeRegistry.playC2S().register(BuildBlocksPayload.TYPE,  BuildBlocksPayload.CODEC);
+        PayloadTypeRegistry.playS2C().register(BuildProgressPayload.TYPE, BuildProgressPayload.CODEC);
 
-        ServerPlayNetworking.registerGlobalReceiver(BuildBlocksPayload.ID, ArchitectHandler::handle);
+        ServerPlayNetworking.registerGlobalReceiver(BuildBlocksPayload.TYPE, ArchitectHandler::handle);
 
         LOGGER.info("[AI Architect] Mod initialised.");
     }

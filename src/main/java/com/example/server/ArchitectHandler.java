@@ -61,7 +61,7 @@ public class ArchitectHandler {
         clearPreview(player, level);
         List<BlockPos> positions = new ArrayList<>(blocks.size());
         for (PlacedBlock pb : blocks) {
-            level.setBlock(pb.pos(), Blocks.LIME_STAINED_GLASS.defaultBlockState(), 3);
+            level.setBlock(pb.pos(), Blocks.LIGHT_BLUE_STAINED_GLASS.defaultBlockState(), 3);
             positions.add(pb.pos());
         }
         PREVIEWS.put(player.getUUID(), positions);

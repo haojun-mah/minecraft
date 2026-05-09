@@ -128,22 +128,16 @@ public class ArchitectScreen extends Screen {
 
         List<BuildBlockEntry> blocks = buildCottage(tx, ty, tz);
 
-        if (preview) {
-            // Client-side only — no server packet; ghost is walk-through
-            GhostPreview.setShape(blocks);
-            GhostPreview.setOrigin(new BlockPos(tx, ty, tz));
-            statusMessage = "Preview active — close screen to drag";
-        } else {
-            // Send real placement to server and clear ghost
-            GhostPreview.clear();
+        if (!preview) {
             generating = true;
             placeButton.active   = false;
             previewButton.active = false;
-            statusMessage = "Placing...";
-            placed = 0;
-            total  = 0;
-            ClientPlayNetworking.send(new BuildBlocksPayload(blocks, false));
         }
+
+        statusMessage = preview ? "Previewing..." : "Placing...";
+        placed = 0;
+        total  = 0;
+        ClientPlayNetworking.send(new BuildBlocksPayload(blocks, preview));
     }
 
     /** 5×5×5 cottage at absolute world coordinates. */

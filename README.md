@@ -1,91 +1,177 @@
 # AI Architect for Minecraft
 
-AI Architect is a Minecraft mod plus a Python backend that turns a natural-language building prompt into a structure you can preview and place in-game.
+Turn a sentence into a Minecraft structure. Press **G** in-game, describe what you want to build, and watch it appear block by block.
 
-Press `G`, describe a build, choose where it should go, preview the shape as a ghost outline, then place it block by block into the world.
+---
 
-## What It Can Do
+## Demo
 
-- Generate a build from a text prompt through the backend API.
-- Preview the generated structure in-world before placing it.
-- Reposition the preview by changing coordinates or dragging it with the crosshair after closing the UI.
-- Place blocks progressively with live progress updates.
-- Expose backend endpoints for queued builds, image-based builds, status polling, and a frontend-friendly synchronous generate route.
+[![Watch the demo](https://youtu.be/lJ81ANBxTJU)]
 
-## Current State
+![Deathstar generated](image.png)
 
-- The end-to-end frontend/backend integration is in place.
-- The mod currently uses `POST /generate` and expects a flat block list like `{x, y, z, block}`.
-- The backend pipeline is still stubbed for Phase 1. It walks through realistic pipeline stages, then returns a deterministic sample cottage shape.
-- The backend also has richer async APIs under `/builds` and `/builds/from-image`, but the in-game UI is currently wired to the text-prompt flow.
+![Castle. F22, House](image-1.png) 
 
-## Project Layout
+![HUD](image-2.png)
 
-- `src/` Fabric mod sources for the Minecraft client/server integration.
-- `backend/` FastAPI backend, pipeline orchestration, sample data, and tests.
-- `backend/examples/sample_response.json` Frontend-ready sample block list you can use without running the server.
 
-## Requirements
+---
 
-- Java 25 for the Minecraft mod toolchain in this repo.
-- Python 3.11+ for the backend.
+## What It Does
 
-## Run The Backend
+Type a prompt like *"a medieval watchtower"* or *"a cozy beach house"* and the AI pipeline researches the structure, generates a 3D model, voxelizes it, and maps it to real Minecraft blocks — all while you watch a live progress bar in-game. Before committing, you get a ghost preview you can reposition with your crosshair.
+
+**Key features:**
+- Text-to-structure generation with live progress tracking
+- Image-to-structure: upload a reference image, get a build
+- Ghost block preview before placement
+- Block-by-block placement animation
+- Semantic block selection (e.g. the AI picks oak planks, not generic stone, for a cabin)
+
+---
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────┐
+│                  Minecraft Client                   │
+│                                                     │
+│   [G key] → ArchitectScreen (prompt input)          │
+│              ↓                                      │
+│           BackendClient (HTTP polling)              │
+│              ↓                    ↑                 │
+│           BuildHud (progress)  GhostPreview         │
+└──────────────────┬──────────────────────────────────┘
+                   │  HTTP (POST /generate, GET /builds/{id})
+                   ▼
+┌─────────────────────────────────────────────────────┐
+│                 FastAPI Backend                     │
+│                                                     │
+│  /generate ──→ job queue ──→ pipeline/runner.py     │
+│                                                     │
+│  Pipeline stages:                                   │
+│    1. Research      (Exa web search + images)       │
+│    2. Planning      (GPT-4o vision analysis)        │
+│    3. Image Gen     (OpenAI image generation)       │
+│    4. Image → 3D   (Fal Trellis GLB model)         │
+│    5. Voxelize      (TrimMesh → RGB voxel grid)     │
+│    6. Block Map     (nearest-color + LLM refinement)│
+│    7. Encode        (RLE + Base64 → mod)            │
+└─────────────────────────────────────────────────────┘
+```
+
+**Frontend** — Fabric mod (Java). Handles the in-game UI, HTTP communication with the backend, ghost preview rendering, and progressive block placement.
+
+**Backend** — FastAPI (Python). Runs an async job queue that orchestrates the full AI pipeline from prompt to encoded block list.
+
+**Pipeline** — Each stage writes artifacts to disk (`artifacts/{job_id}/`), so any stage can be debugged or replayed independently.
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Minecraft mod | Java 25, Fabric Loader, Fabric API |
+| Build tool | Gradle + Fabric Loom |
+| Backend | Python 3.11+, FastAPI, Uvicorn |
+| Research | Exa API |
+| Image generation | OpenAI (GPT-4o, DALL·E) |
+| 3D model generation | Fal Trellis |
+| Voxelization | TrimMesh, NumPy, scikit-image |
+| Block mapping | Nearest-color palette + OpenAI semantic refinement |
+| Serialization | RLE + Base64 |
+
+---
+
+## Project Structure
+
+```
+├── src/
+│   ├── main/java/com/example/        # Server-side mod (block placement, networking)
+│   └── client/java/com/example/      # Client-side mod (UI, preview, HUD)
+├── backend/
+│   ├── api/                          # FastAPI routes and schemas
+│   ├── pipeline/                     # AI pipeline stages
+│   │   ├── research.py
+│   │   ├── image_gen/
+│   │   ├── generator3d/
+│   │   ├── voxelize.py
+│   │   ├── block_map/
+│   │   └── encode.py
+│   ├── storage/                      # In-memory job store
+│   └── data/block_palette.json       # Minecraft block → RGB mapping
+└── build.gradle
+```
+
+---
+
+## Getting Started
+
+### Prerequisites
+
+- Java 25+
+- Python 3.11+
+- A Minecraft instance with Fabric Loader
+
+### Backend
 
 ```bash
 cd backend
 python -m venv .venv
-source .venv/bin/activate
-pip install -e .
+source .venv/bin/activate        # Windows: .venv\Scripts\activate
+pip install -e ".[pipeline,dev]"
+cp .env.example .env             # Fill in your API keys
 uvicorn main:app --reload --host 127.0.0.1 --port 8000
 ```
 
-Useful endpoints:
+**Required API keys** (`.env`):
 
-- `http://127.0.0.1:8000/docs`
-- `http://127.0.0.1:8000/healthz`
-- `http://127.0.0.1:8000/generate`
+| Key | Purpose |
+|---|---|
+| `OPENAI_API_KEY` | Image generation + block refinement |
+| `EXA_API_KEY` | Architectural research |
+| `FAL_KEY` | 3D model generation |
+| `GEMINI_API_KEY` | Backup LLM (optional) |
 
-By default, the mod looks for the backend at `http://127.0.0.1:8000`.
-
-You can override that with either:
-
-- JVM property: `-Dmodid.backendUrl=http://host:port`
-- Environment variable: `MINECRAFT_AI_BACKEND_URL=http://host:port`
-
-## Run The Mod
-
-From the repo root:
+### Minecraft Mod
 
 ```bash
 ./gradlew runClient
 ```
 
-Then in-game:
+By default the mod connects to `http://127.0.0.1:8000`. Override with:
 
-1. Press `G` to open AI Architect.
-2. Enter a build prompt.
-3. Set the target `X/Y/Z`.
-4. Click `Preview` to inspect the shape.
-5. Click `Place` to build it in the world.
+```
+-Dmodid.backendUrl=http://your-host:port
+```
 
-## Backend API Summary
+---
 
-The backend exposes two styles of API:
+## Usage
 
-- `POST /generate`
-  Returns a flat block list for the mod UI. This is the path the frontend uses now.
-- `POST /builds` and `GET /builds/{job_id}`
-  Async job flow for structured build requests and polling.
-- `POST /builds/from-image`
-  Async image upload flow for image-conditioned builds.
+1. Start the backend server
+2. Launch Minecraft via `./gradlew runClient`
+3. Load a world and press **G**
+4. Enter a description and your target coordinates
+5. Watch the ghost preview appear — reposition it with your crosshair
+6. Click **Place** to build
 
-## Notes
+---
 
-- The checked-in sample response is already in the flat block-list format the frontend can consume directly.
-- Generated placement currently happens block by block so players can see progress rather than having the structure appear instantly.
-- Some backend files currently contain unresolved merge markers. This README reflects the intended integrated behavior and the active frontend path, not every conflicting branch variant.
+## Running Tests
 
-## License
+```bash
+cd backend
+pytest
+```
 
-This repository started from the Fabric example mod template, which is available under CC0. Check repository files before publishing or redistributing under a different license model.
+---
+
+## Roadmap
+
+- [x] Phase 1 — API contract + stubbed pipeline (deterministic sample builds)
+- [ ] Phase 2 — Direct LLM block generation (no 3D model)
+- [ ] Phase 3 — Full pipeline (research → image → 3D → voxelize → blocks)
+- [ ] Phase 4 — Isometric preview, hollow-shell mode, semantic refinement
+- [ ] Phase 5 — SQLite persistence, disk cache, retry logic

@@ -2,6 +2,8 @@ package com.example.client;
 
 import com.example.network.BuildBlockEntry;
 import com.google.gson.Gson;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
 
@@ -10,7 +12,7 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -19,7 +21,9 @@ import java.util.concurrent.CompletionException;
 final class BackendClient {
 
     private static final Gson GSON = new Gson();
-    private static final HttpClient HTTP = HttpClient.newHttpClient();
+    private static final HttpClient HTTP = HttpClient.newBuilder()
+            .version(HttpClient.Version.HTTP_1_1)
+            .build();
     private static final String DEFAULT_BASE_URL = "http://127.0.0.1:8000";
 
     private BackendClient() {}
@@ -36,11 +40,19 @@ final class BackendClient {
                         throw new CompletionException(new IOException(readErrorMessage(response)));
                     }
                     try {
-                        BuildBlockEntry[] blocks = GSON.fromJson(response.body(), BuildBlockEntry[].class);
-                        if (blocks == null) {
-                            throw new IOException("Backend returned an empty response");
+                        JsonArray arr = GSON.fromJson(response.body(), JsonArray.class);
+                        if (arr == null) throw new IOException("Backend returned an empty response");
+                        List<BuildBlockEntry> blocks = new ArrayList<>(arr.size());
+                        for (JsonElement el : arr) {
+                            JsonObject o = el.getAsJsonObject();
+                            blocks.add(new BuildBlockEntry(
+                                    o.get("x").getAsInt(),
+                                    o.get("y").getAsInt(),
+                                    o.get("z").getAsInt(),
+                                    o.get("block").getAsString()
+                            ));
                         }
-                        return Arrays.asList(blocks);
+                        return blocks;
                     } catch (JsonParseException | IOException exc) {
                         throw new CompletionException(exc);
                     }

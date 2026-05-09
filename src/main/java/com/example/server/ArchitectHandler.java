@@ -95,20 +95,25 @@ public class ArchitectHandler {
         return found.orElse(Blocks.STONE_BRICKS);
     }
 
+    private static final int BATCH_SIZE = 20;
+
     private static void placeSequentially(ServerPlayer player, List<PlacedBlock> blocks) {
         ServerLevel level = (ServerLevel) player.level();
         int total = blocks.size();
+        int batches = (int) Math.ceil((double) total / BATCH_SIZE);
 
-        for (int i = 0; i < total; i++) {
-            final int idx   = i;
-            final PlacedBlock entry = blocks.get(idx);
+        for (int b = 0; b < batches; b++) {
+            final int start = b * BATCH_SIZE;
+            final int end   = Math.min(start + BATCH_SIZE, total);
             SCHEDULER.schedule(
                     () -> level.getServer().execute(() -> {
-                        level.setBlock(entry.pos(), entry.block().defaultBlockState(), 3);
+                        for (int i = start; i < end; i++) {
+                            level.setBlock(blocks.get(i).pos(), blocks.get(i).block().defaultBlockState(), 3);
+                        }
                         ServerPlayNetworking.send(player, new BuildProgressPayload(
-                                idx + 1, total, idx == total - 1));
+                                end, total, end == total));
                     }),
-                    idx * 40L, TimeUnit.MILLISECONDS
+                    (long) b * 50, TimeUnit.MILLISECONDS
             );
         }
     }

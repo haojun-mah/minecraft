@@ -25,7 +25,6 @@ from pipeline.research_types import ResearchBundle
 from pipeline.structure_result import build_result_from_compacted_grid
 from pipeline.voxelize import save_voxelized_mesh, voxelize_mesh
 from storage.jobs import JobStore
-from storage.sample import load_forced_sample_response
 
 logger = logging.getLogger(__name__)
 
@@ -43,17 +42,6 @@ async def run_pipeline(
     On failure, marks status=error with the exception message.
     """
     try:
-        logger.info("forcing backend output from examples/sample_response.json", extra={"job_id": job_id})
-        store.update_status(job_id, status="running", stage="encoding", progress=0.95)
-        result = load_forced_sample_response(
-            job_id=job_id,
-            prompt=build_request.prompt,
-            hero_image_url=build_request.input_image_url,
-            input_image_url=build_request.input_image_url,
-        )
-        store.set_result(job_id, result)
-        return
-
         job_dir = artifacts_dir / job_id
         job_dir.mkdir(parents=True, exist_ok=True)
         bundle: ResearchBundle | None = None
@@ -131,14 +119,19 @@ async def _run_post_3d_pipeline(
     settings,
 ):
     store.update_status(job_id, status="running", stage="voxelizing", progress=0.70)
+    logger.info("voxelizing mesh", extra={"job_id": job_id})
     voxels = await asyncio.to_thread(voxelize_mesh, model_path, build_request.max_size)
+    logger.info("voxelization done: size=%s filled=%d", voxels.size, int(voxels.filled.sum()), extra={"job_id": job_id})
     save_voxelized_mesh(voxels, job_dir / "voxel_grid.npz")
 
     store.update_status(job_id, status="running", stage="block_mapping", progress=0.82)
+    logger.info("mapping RGB to blocks", extra={"job_id": job_id})
     palette = load_block_palette(settings.block_palette_path)
     stage_a = map_rgb_to_blocks(voxels, palette)
+    logger.info("block mapping done: %d unique blocks", len(stage_a.histogram), extra={"job_id": job_id})
     save_block_grid(stage_a, job_dir / "stage_a_blocks.npz")
 
+    logger.info("starting semantic refinement", extra={"job_id": job_id})
     semantic = await semantic_refine_blocks(
         prompt=build_request.prompt,
         style_hint=build_request.style_hint,
@@ -148,19 +141,26 @@ async def _run_post_3d_pipeline(
         output_path=job_dir / "block_refine.json",
         settings=settings,
     )
+    logger.info("semantic refinement done: %d remaps", len(semantic.remap), extra={"job_id": job_id})
+
+    logger.info("applying remap and compacting grid", extra={"job_id": job_id})
     final_grid = apply_semantic_remap(stage_a, semantic.remap)
     compacted = compact_block_grid(final_grid)
     save_compacted_grid(compacted, job_dir / "final_blocks.npz")
+    logger.info("compacted: palette=%d blocks=%d", len(compacted.palette), int((compacted.indices > 0).sum()), extra={"job_id": job_id})
 
     store.update_status(job_id, status="running", stage="encoding", progress=0.95)
+    logger.info("encoding result", extra={"job_id": job_id})
     await asyncio.sleep(0)
-    return build_result_from_compacted_grid(
+    result = build_result_from_compacted_grid(
         job_id=job_id,
         prompt=build_request.prompt,
         compacted=compacted,
         hero_image_url=hero_image_url,
         input_image_url=build_request.input_image_url,
     )
+    logger.info("pipeline complete: %s size=%s", job_id, result.size, extra={"job_id": job_id})
+    return result
 
 
 async def _simulate_pipeline(

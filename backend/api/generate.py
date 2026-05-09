@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter(tags=["generate"])
 
 _POLL_INTERVAL = 0.5
-_TIMEOUT = 120.0
+_TIMEOUT = 600.0
 
 
 class GenerateRequest(BaseModel):

@@ -636,11 +636,14 @@ source = { editable = "." }
 dependencies = [
     { name = "fastapi" },
     { name = "httpx" },
+    { name = "numpy" },
     { name = "pillow" },
     { name = "pydantic" },
     { name = "pydantic-settings" },
     { name = "python-dotenv" },
     { name = "python-multipart" },
+    { name = "scikit-image" },
+    { name = "trimesh" },
     { name = "uvicorn", extra = ["standard"] },
 ]
 
@@ -656,10 +659,7 @@ pipeline = [
     { name = "exa-py" },
     { name = "fal-client" },
     { name = "google-genai" },
-    { name = "numpy" },
     { name = "openai" },
-    { name = "scikit-image" },
-    { name = "trimesh" },
 ]
 
 [package.metadata]
@@ -670,7 +670,7 @@ requires-dist = [
     { name = "fastapi", specifier = ">=0.115.0" },
     { name = "google-genai", marker = "extra == 'pipeline'", specifier = ">=0.3.0" },
     { name = "httpx", specifier = ">=0.27.0" },
-    { name = "numpy", marker = "extra == 'pipeline'", specifier = ">=1.26.0" },
+    { name = "numpy", specifier = ">=1.26.0" },
     { name = "openai", marker = "extra == 'pipeline'", specifier = ">=1.40.0" },
     { name = "pillow", specifier = ">=10.4.0" },
     { name = "pydantic", specifier = ">=2.7.0" },
@@ -681,8 +681,8 @@ requires-dist = [
     { name = "python-multipart", specifier = ">=0.0.9" },
     { name = "respx", marker = "extra == 'dev'", specifier = ">=0.21.0" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.5.0" },
-    { name = "scikit-image", marker = "extra == 'pipeline'", specifier = ">=0.24.0" },
-    { name = "trimesh", marker = "extra == 'pipeline'", specifier = ">=4.4.0" },
+    { name = "scikit-image", specifier = ">=0.24.0" },
+    { name = "trimesh", specifier = ">=4.4.0" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.30.0" },
 ]
 provides-extras = ["pipeline", "dev"]

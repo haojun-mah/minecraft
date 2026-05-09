@@ -12,14 +12,15 @@ import logging
 from pathlib import Path
 
 from api.schemas import BuildRequest
+from config import get_settings
+from pipeline.research import research
 from storage.jobs import JobStore
 from storage.sample import build_sample_response
 
 logger = logging.getLogger(__name__)
 
 
-_TEXT_STAGES_PHASE1: list[tuple[str, float, float]] = [
-    ("research", 0.10, 0.4),
+_TEXT_STAGES_AFTER_RESEARCH_PHASE1: list[tuple[str, float, float]] = [
     ("planning", 0.25, 0.4),
     ("image_gen", 0.45, 0.6),
     ("image_to_3d", 0.65, 0.8),
@@ -48,9 +49,31 @@ async def run_pipeline(
     On failure, marks status=error with the exception message.
     """
     try:
-        stages = _IMAGE_STAGES_PHASE1 if request.input_image_url else _TEXT_STAGES_PHASE1
-        store.update_status(job_id, status="running", stage=stages[0][0], progress=0.0)
-        await _simulate_pipeline(job_id, store, stages)
+        if request.input_image_url:
+            stages = _IMAGE_STAGES_PHASE1
+            store.update_status(job_id, status="running", stage=stages[0][0], progress=0.0)
+            await _simulate_pipeline(job_id, store, stages)
+        else:
+            settings = get_settings()
+            store.update_status(job_id, status="running", stage="research", progress=0.05)
+            bundle = await research(
+                request.prompt,
+                job_id=job_id,
+                artifacts_dir=artifacts_dir,
+                settings=settings,
+            )
+            logger.info(
+                "research complete",
+                extra={
+                    "job_id": job_id,
+                    "visual_descriptions": len(bundle.visual_descriptions),
+                    "images": len(bundle.images),
+                    "cached": bundle.cached,
+                },
+            )
+            store.update_status(job_id, status="running", stage="planning", progress=0.20)
+            await _simulate_pipeline(job_id, store, _TEXT_STAGES_AFTER_RESEARCH_PHASE1)
+
         result = build_sample_response(
             job_id=job_id,
             prompt=request.prompt,

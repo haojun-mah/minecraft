@@ -237,35 +237,6 @@ public class ArchitectScreen extends Screen {
         }
         String message = current.getMessage();
         return (message == null || message.isBlank()) ? "Backend request failed" : message;
-        List<BuildBlockEntry> blocks = buildCottage(tx, ty, tz);
-
-        if (!preview) {
-            generating = true;
-            placeButton.active   = false;
-            previewButton.active = false;
-        }
-
-        statusMessage = preview ? "Previewing..." : "Placing...";
-        placed = 0;
-        total  = 0;
-        ClientPlayNetworking.send(new BuildBlocksPayload(blocks, preview));
-    }
-
-    /** 5×5×5 cottage at absolute world coordinates. */
-    private static List<BuildBlockEntry> buildCottage(int ox, int oy, int oz) {
-        List<BuildBlockEntry> b = new ArrayList<>();
-        for (int x = 0; x < 5; x++)
-            for (int z = 0; z < 5; z++)
-                b.add(new BuildBlockEntry(ox+x, oy,   oz+z, "minecraft:cobblestone"));
-        for (int y = 1; y <= 2; y++)
-            for (int x = 0; x < 5; x++)
-                for (int z = 0; z < 5; z++)
-                    if (x==0||x==4||z==0||z==4)
-                        b.add(new BuildBlockEntry(ox+x, oy+y, oz+z, "minecraft:oak_planks"));
-        for (int x = 0; x < 5; x++)
-            for (int z = 0; z < 5; z++)
-                b.add(new BuildBlockEntry(ox+x, oy+3, oz+z, "minecraft:hay_block"));
-        return b;
     }
 
     // -------------------------------------------------------------------------

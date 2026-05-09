@@ -1,3 +1,5 @@
+
+
 # AI Architect for Minecraft
 
 Turn a sentence into a Minecraft structure. Press **G** in-game, describe what you want to build, and watch it appear block by block.
@@ -6,7 +8,7 @@ Turn a sentence into a Minecraft structure. Press **G** in-game, describe what y
 
 ## Demo
 
-<video src="[PASTE_GENERATED_URL_HERE](https://youtu.be/lJ81ANBxTJU)" width="100%"></video>
+![Demo](https://youtu.be/lJ81ANBxTJU)
 
 ![Deathstar generated](image.png)
 

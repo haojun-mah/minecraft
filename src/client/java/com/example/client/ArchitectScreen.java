@@ -3,6 +3,7 @@ package com.example.client;
 import com.example.network.BuildBlockEntry;
 import com.example.network.BuildBlocksPayload;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
@@ -19,23 +20,29 @@ import java.util.List;
 public class ArchitectScreen extends Screen {
 
     private static final int PANEL_W = 340;
-    private static final int PANEL_H = 185;
+    private static final int PANEL_H = 215;
     private static final int ACCENT  = 0xFF5566FF;
     private static final int BG      = 0xDD000000;
 
-    // Field width, button width, gap — kept as constants for layout math
-    private static final int FW = 69;   // coord field width
-    private static final int BW = 14;   // nudge button width
-    private static final int GW = BW + 2 + FW + 2 + BW; // group width = 101
-    private static final int GAP = 8;   // gap between groups
+    // Coord group constants
+    private static final int FW  = 69;
+    private static final int BW  = 14;
+    private static final int GW  = BW + 2 + FW + 2 + BW;
+    private static final int GAP = 8;
+
+    // Size field constants
+    private static final int SF_W  = 94;
+    private static final int SF_GAP = 8;
 
     private EditBox promptField;
     private EditBox xField, yField, zField;
+    private EditBox wField, hField, dField;
     private Button  previewButton, placeButton;
+
+    boolean generating = false;  // package-private for BuildState callback access
 
     private String  statusMessage = "";
     private int     placed = 0, total = 0;
-    private boolean generating = false;
     private String  cachedPrompt = "";
     private List<BuildBlockEntry> cachedRelativeBlocks = List.of();
 
@@ -45,7 +52,6 @@ public class ArchitectScreen extends Screen {
 
     // -------------------------------------------------------------------------
     // Init
-    // -------------------------------------------------------------------------
 
     @Override
     protected void init() {
@@ -59,7 +65,14 @@ public class ArchitectScreen extends Screen {
         promptField.setHint(Component.literal("e.g. medieval castle, cosy wood cabin..."));
         addRenderableWidget(promptField);
 
-        // X / Y / Z fields — prefer ghost origin (crosshair target) when available
+        // Sync prompt from previous session if still generating
+        if (BuildState.INSTANCE.isActive()) {
+            statusMessage = BuildState.INSTANCE.getStatusMessage();
+            generating    = true;
+            setButtonsEnabled(false);
+        }
+
+        // Origin X/Y/Z
         BlockPos ghostOrigin = GhostPreview.isActive() ? GhostPreview.getOrigin() : null;
         int bx = ghostOrigin != null ? ghostOrigin.getX() : (minecraft.player != null ? minecraft.player.getBlockX() : 0);
         int by = ghostOrigin != null ? ghostOrigin.getY() : (minecraft.player != null ? minecraft.player.getBlockY() : 64);
@@ -69,113 +82,122 @@ public class ArchitectScreen extends Screen {
         yField = buildCoordGroup(px, py + 72, 1, by);
         zField = buildCoordGroup(px, py + 72, 2, bz);
 
-        // Preview / Place buttons
-        int btnW = (PANEL_W - 30) / 2;   // ~155 px each
+        // Size W/H/D
+        wField = buildSizeField(px + 10,                   py + 107, 32);
+        hField = buildSizeField(px + 10 + SF_W + SF_GAP,   py + 107, 32);
+        dField = buildSizeField(px + 10 + (SF_W + SF_GAP) * 2, py + 107, 32);
+
+        // Buttons
+        int btnW = (PANEL_W - 30) / 2;
         previewButton = Button.builder(Component.literal("Preview"), btn -> sendBlocks(true))
-                .bounds(px + 10, py + 102, btnW, 20)
-                .build();
+                .bounds(px + 10, py + 132, btnW, 20).build();
         placeButton = Button.builder(Component.literal("Place"), btn -> sendBlocks(false))
-                .bounds(px + 20 + btnW, py + 102, btnW, 20)
-                .build();
+                .bounds(px + 20 + btnW, py + 132, btnW, 20).build();
         addRenderableWidget(previewButton);
         addRenderableWidget(placeButton);
+
+        if (generating) setButtonsEnabled(false);
 
         setInitialFocus(promptField);
         promptField.setFocused(true);
     }
 
-    /** Adds [-] [field] [+] for one axis and returns the EditBox. */
     private EditBox buildCoordGroup(int panelX, int fieldY, int groupIndex, int value) {
         int gx = panelX + 10 + groupIndex * (GW + GAP);
-
-        addRenderableWidget(Button.builder(Component.literal("<"),
-                        b -> nudge(groupIndex, -1))
+        addRenderableWidget(Button.builder(Component.literal("<"), b -> nudge(groupIndex, -1))
                 .bounds(gx, fieldY, BW, 20).build());
-
         EditBox field = new EditBox(font, gx + BW + 2, fieldY, FW, 20, Component.empty());
         field.setMaxLength(8);
         field.setValue(String.valueOf(value));
         addRenderableWidget(field);
-
-        addRenderableWidget(Button.builder(Component.literal(">"),
-                        b -> nudge(groupIndex, +1))
+        addRenderableWidget(Button.builder(Component.literal(">"), b -> nudge(groupIndex, +1))
                 .bounds(gx + BW + 2 + FW + 2, fieldY, BW, 20).build());
+        return field;
+    }
 
+    private EditBox buildSizeField(int x, int y, int defaultVal) {
+        EditBox field = new EditBox(font, x, y, SF_W, 20, Component.empty());
+        field.setMaxLength(4);
+        field.setValue(String.valueOf(defaultVal));
+        addRenderableWidget(field);
         return field;
     }
 
     // -------------------------------------------------------------------------
     // Logic
-    // -------------------------------------------------------------------------
 
-    /** Nudge one axis by delta and re-send a preview automatically. */
     private void nudge(int axis, int delta) {
         EditBox f = axis == 0 ? xField : axis == 1 ? yField : zField;
-        try {
-            f.setValue(String.valueOf(Integer.parseInt(f.getValue().trim()) + delta));
-        } catch (NumberFormatException ignored) {}
-        sendBlocks(true);   // auto re-preview on nudge
+        try { f.setValue(String.valueOf(Integer.parseInt(f.getValue().trim()) + delta)); }
+        catch (NumberFormatException ignored) {}
+        sendBlocks(true);
     }
 
     private void sendBlocks(boolean preview) {
         if (generating) return;
 
         String prompt = promptField.getValue().trim();
-        if (prompt.isEmpty()) {
-            statusMessage = "Error: prompt cannot be empty";
-            return;
-        }
+        if (prompt.isEmpty()) { statusMessage = "Error: prompt cannot be empty"; return; }
 
         int tx, ty, tz;
         try {
             tx = Integer.parseInt(xField.getValue().trim());
             ty = Integer.parseInt(yField.getValue().trim());
             tz = Integer.parseInt(zField.getValue().trim());
-        } catch (NumberFormatException e) {
-            statusMessage = "Error: X/Y/Z must be integers";
-            return;
-        }
+        } catch (NumberFormatException e) { statusMessage = "Error: X/Y/Z must be integers"; return; }
+
+        int sw, sh, sd;
+        try {
+            sw = Math.max(1, Math.min(96, Integer.parseInt(wField.getValue().trim())));
+            sh = Math.max(1, Math.min(96, Integer.parseInt(hField.getValue().trim())));
+            sd = Math.max(1, Math.min(96, Integer.parseInt(dField.getValue().trim())));
+        } catch (NumberFormatException e) { statusMessage = "Error: W/H/D must be integers"; return; }
+
+        int[] maxSize = {sw, sh, sd};
 
         if (prompt.equals(cachedPrompt) && !cachedRelativeBlocks.isEmpty()) {
             applyGeneratedBlocks(cachedRelativeBlocks, tx, ty, tz, preview);
         } else {
-            requestBlocks(prompt, tx, ty, tz, preview);
+            requestBlocks(prompt, maxSize, tx, ty, tz, preview);
         }
     }
 
-    private void requestBlocks(String prompt, int tx, int ty, int tz, boolean preview) {
+    private void requestBlocks(String prompt, int[] maxSize, int tx, int ty, int tz, boolean preview) {
         generating = true;
         setButtonsEnabled(false);
-        statusMessage = preview ? "Generating preview..." : "Generating build...";
-        placed = 0;
-        total = 0;
+        statusMessage = "Generating...";
+        placed = 0; total = 0;
 
-        if (minecraft == null) {
-            generating = false;
-            setButtonsEnabled(true);
-            statusMessage = "Minecraft client unavailable";
-            return;
-        }
+        BuildState.INSTANCE.startBackend();
 
-        BackendClient.generateBlocks(prompt).whenComplete((blocks, error) -> minecraft.execute(() -> {
-            if (error != null) {
-                generating = false;
-                setButtonsEnabled(true);
-                statusMessage = formatError(error);
-                return;
-            }
+        BackendClient.generateBlocks(prompt, maxSize, update ->
+                BuildState.INSTANCE.updateBackend(update.stage(), update.progress())
+        ).whenComplete((blocks, error) -> {
+            Minecraft mc = Minecraft.getInstance();
+            mc.execute(() -> {
+                if (error != null) {
+                    String msg = formatError(error);
+                    BuildState.INSTANCE.setError(msg);
+                    onCallbackScreen(s -> { s.generating = false; s.setButtonsEnabled(true); s.statusMessage = msg; });
+                    return;
+                }
+                if (blocks == null || blocks.isEmpty()) {
+                    String msg = "Backend returned no blocks";
+                    BuildState.INSTANCE.setError(msg);
+                    onCallbackScreen(s -> { s.generating = false; s.setButtonsEnabled(true); s.statusMessage = msg; });
+                    return;
+                }
+                cachedPrompt = prompt;
+                cachedRelativeBlocks = List.copyOf(blocks);
+                onCallbackScreen(s -> { s.cachedPrompt = prompt; s.cachedRelativeBlocks = cachedRelativeBlocks; });
+                applyGeneratedBlocks(cachedRelativeBlocks, tx, ty, tz, preview);
+            });
+        });
+    }
 
-            if (blocks.isEmpty()) {
-                generating = false;
-                setButtonsEnabled(true);
-                statusMessage = "Backend returned no blocks";
-                return;
-            }
-
-            cachedPrompt = prompt;
-            cachedRelativeBlocks = List.copyOf(blocks);
-            applyGeneratedBlocks(cachedRelativeBlocks, tx, ty, tz, preview);
-        }));
+    private static void onCallbackScreen(java.util.function.Consumer<ArchitectScreen> fn) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.screen instanceof ArchitectScreen s) fn.accept(s);
     }
 
     private void applyGeneratedBlocks(List<BuildBlockEntry> relativeBlocks, int tx, int ty, int tz, boolean preview) {
@@ -184,9 +206,10 @@ public class ArchitectScreen extends Screen {
             BlockPos anchor = minPos(absoluteBlocks);
             GhostPreview.setShape(absoluteBlocks);
             GhostPreview.setOrigin(anchor);
-            generating = false;
+            generating    = false;
             setButtonsEnabled(true);
             statusMessage = "Preview ready — close screen to drag";
+            BuildState.INSTANCE.clear();
         } else {
             startPlacement(absoluteBlocks);
         }
@@ -198,67 +221,59 @@ public class ArchitectScreen extends Screen {
         setButtonsEnabled(false);
         statusMessage = "Placing...";
         placed = 0;
-        total = blocks.size();
+        total  = blocks.size();
+        BuildState.INSTANCE.startPlacement(total);
         ClientPlayNetworking.send(new BuildBlocksPayload(blocks, false));
     }
 
-    private void setButtonsEnabled(boolean enabled) {
+    void setButtonsEnabled(boolean enabled) {
         previewButton.active = enabled;
-        placeButton.active = enabled;
+        placeButton.active   = enabled;
     }
 
-    private static List<BuildBlockEntry> translateBlocks(List<BuildBlockEntry> blocks, int ox, int oy, int oz) {
-        List<BuildBlockEntry> translated = new ArrayList<>(blocks.size());
-        for (BuildBlockEntry block : blocks) {
-            translated.add(new BuildBlockEntry(
-                    ox + block.x(),
-                    oy + block.y(),
-                    oz + block.z(),
-                    block.block()
-            ));
+    // -------------------------------------------------------------------------
+    // Progress (called from ExampleModClient packet handler)
+
+    public void onProgress(int placedNow, int totalNow, boolean done) {
+        placed = placedNow;
+        total  = totalNow;
+        BuildState.INSTANCE.updatePlacement(placedNow, totalNow, done);
+        if (done) {
+            generating    = false;
+            statusMessage = "Done! Placed " + totalNow + " blocks.";
+            setButtonsEnabled(true);
+        } else {
+            statusMessage = "Placing... " + placedNow + "/" + totalNow;
         }
-        return translated;
+    }
+
+    // -------------------------------------------------------------------------
+    // Helpers
+
+    private static List<BuildBlockEntry> translateBlocks(List<BuildBlockEntry> blocks, int ox, int oy, int oz) {
+        List<BuildBlockEntry> out = new ArrayList<>(blocks.size());
+        for (BuildBlockEntry b : blocks)
+            out.add(new BuildBlockEntry(ox + b.x(), oy + b.y(), oz + b.z(), b.block()));
+        return out;
     }
 
     private static BlockPos minPos(List<BuildBlockEntry> blocks) {
-        BuildBlockEntry min = Collections.min(
-                blocks,
+        BuildBlockEntry min = Collections.min(blocks,
                 Comparator.comparingInt(BuildBlockEntry::x)
                         .thenComparingInt(BuildBlockEntry::y)
-                        .thenComparingInt(BuildBlockEntry::z)
-        );
+                        .thenComparingInt(BuildBlockEntry::z));
         return new BlockPos(min.x(), min.y(), min.z());
     }
 
     private static String formatError(Throwable error) {
         Throwable current = error;
-        while (current.getCause() != null) {
-            current = current.getCause();
-        }
-        String message = current.getMessage();
-        return (message == null || message.isBlank()) ? "Backend request failed" : message;
-    }
-
-    // -------------------------------------------------------------------------
-    // Progress callbacks
-    // -------------------------------------------------------------------------
-
-    public void onProgress(int placed, int total, boolean done) {
-        this.placed = placed;
-        this.total  = total;
-        if (done) {
-            generating           = false;
-            statusMessage        = "Done! Placed " + total + " blocks.";
-            placeButton.active   = true;
-            previewButton.active = true;
-        } else {
-            statusMessage = "Placing... " + placed + "/" + total;
-        }
+        while (current.getCause() != null) current = current.getCause();
+        String msg = current.getMessage();
+        return (msg == null || msg.isBlank()) ? "Backend request failed" : msg;
     }
 
     // -------------------------------------------------------------------------
     // Rendering
-    // -------------------------------------------------------------------------
 
     @Override
     public void extractRenderState(GuiGraphicsExtractor g, int mx, int my, float delta) {
@@ -267,27 +282,40 @@ public class ArchitectScreen extends Screen {
 
         g.fill(px, py, px + PANEL_W, py + PANEL_H, BG);
         border(g, px, py, PANEL_W, PANEL_H, ACCENT);
-
         g.fill(px, py, px + PANEL_W, py + 18, ACCENT);
         g.centeredText(font, title, width / 2, py + 5, 0xFFFFFF);
 
         g.text(font, "Describe your structure:", px + 10, py + 26, 0xCCCCCC);
 
-        // Axis labels centred over each coord group
+        // Origin axis labels
         for (int i = 0; i < 3; i++) {
             String label = i == 0 ? "X" : i == 1 ? "Y" : "Z";
             int cx = px + 10 + i * (GW + GAP) + GW / 2;
             g.centeredText(font, label, cx, py + 62, 0xAAAAAA);
         }
 
-        super.extractRenderState(g, mx, my, delta);  // widgets
+        // Size labels
+        String[] sizeLabels = {"W", "H", "D"};
+        for (int i = 0; i < 3; i++) {
+            int cx = px + 10 + i * (SF_W + SF_GAP) + SF_W / 2;
+            g.centeredText(font, sizeLabels[i], cx, py + 97, 0xAAAAAA);
+        }
 
-        if (!statusMessage.isEmpty())
-            g.centeredText(font, statusMessage, width / 2, py + 132, 0xAAAAAA);
+        super.extractRenderState(g, mx, my, delta);
 
-        if (total > 0) {
-            int bx = px + 10, by = py + 145, bw = PANEL_W - 20;
-            int filled = (int) ((float) placed / total * bw);
+        // Status
+        String displayStatus = generating
+                ? BuildState.INSTANCE.getStatusMessage()
+                : statusMessage;
+        if (!displayStatus.isEmpty())
+            g.centeredText(font, displayStatus, width / 2, py + 160, 0xAAAAAA);
+
+        // Progress bar
+        int barTotal = "placing".equals(BuildState.INSTANCE.getPhase()) ? BuildState.INSTANCE.getTotal() : total;
+        if (barTotal > 0) {
+            float prog = BuildState.INSTANCE.getOverallProgress();
+            int bx = px + 10, by = py + 173, bw = PANEL_W - 20;
+            int filled = (int) (prog * bw);
             g.fill(bx, by, bx + bw, by + 6, 0xFF222222);
             g.fill(bx, by, bx + filled, by + 6, ACCENT);
             if (filled > 0 && filled < bw)

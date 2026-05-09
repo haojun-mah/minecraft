@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find ~/.gradle -name \"*.jar\" 2>/dev/null | grep -i \"fabric-rendering\\\\|fabric-api\" | grep -v sources | head -10)",
+      "Read(//c/Users/Chia Hon Lam/.gradle/**)"
+    ]
+  }
+}

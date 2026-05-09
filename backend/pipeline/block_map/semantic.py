@@ -91,10 +91,21 @@ def _call_openai(
         research_bundle=research_bundle,
     )
     content = (
-        "You remap Minecraft block IDs after color-based voxel mapping. "
-        "Return strict JSON with keys remap and reasoning_summary. "
-        "Only remap source block IDs that appear in stage_a_histogram. "
-        "Every target must be one of allowed_blocks. Do not invent block IDs.\n\n"
+        "Remap Minecraft block IDs to create an architecturally diverse, realistic structure.\n\n"
+        "RULES:\n"
+        "1. Only remap block IDs that appear in stage_a_histogram.\n"
+        "2. Every target must be from allowed_blocks. Never invent IDs.\n"
+        "3. DIVERSITY IS REQUIRED: no single block may represent more than 30% of non-air voxels. "
+        "If the histogram shows one block dominating, split it across multiple thematically appropriate blocks.\n"
+        "4. Assign DIFFERENT blocks to different architectural zones:\n"
+        "   - Foundation/base (bottom y-layer): stone, cobblestone, stone_bricks, deepslate_bricks\n"
+        "   - Outer walls: planks, bricks, stone_bricks, concrete, terracotta\n"
+        "   - Roof: logs, stairs, slabs, shingles-style blocks\n"
+        "   - Interior floors: planks, stone, smooth_stone\n"
+        "   - Trim/accent/detail: stairs, slabs, fences, chiseled variants\n"
+        "5. Match the structure's style and period to the prompt and research_details.\n"
+        "6. Map EACH source block to a DISTINCT target — do not funnel multiple sources to the same block.\n\n"
+        "Return strict JSON with keys remap and reasoning_summary.\n\n"
         f"{json.dumps(payload, indent=2)}"
     )
     response = client.chat.completions.create(
@@ -102,7 +113,12 @@ def _call_openai(
         messages=[
             {
                 "role": "system",
-                "content": "You are a Minecraft build-material selection assistant.",
+                "content": (
+                    "You are an expert Minecraft architect. Your job is to select rich, diverse, "
+                    "period-accurate block palettes for voxel buildings. You always use many different "
+                    "block types to make structures look realistic and visually interesting — never "
+                    "defaulting to a single dominant material."
+                ),
             },
             {"role": "user", "content": content},
         ],

@@ -23,6 +23,7 @@ public class ExampleModClient implements ClientModInitializer {
         ));
 
         GhostPreview.register();
+        BuildHud.register();
 
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             GhostPreview.tick(client);
@@ -33,6 +34,10 @@ public class ExampleModClient implements ClientModInitializer {
 
         ClientPlayNetworking.registerGlobalReceiver(BuildProgressPayload.TYPE, (payload, context) ->
                 context.client().execute(() -> {
+                    // Always update global state (HUD works even when screen is closed)
+                    BuildState.INSTANCE.updatePlacement(payload.placed(), payload.total(), payload.done());
+
+                    // Also update the screen if it is open
                     if (context.client().screen instanceof ArchitectScreen screen) {
                         screen.onProgress(payload.placed(), payload.total(), payload.done());
                     }

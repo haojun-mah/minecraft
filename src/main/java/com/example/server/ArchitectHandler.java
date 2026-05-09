@@ -18,18 +18,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 
 public class ArchitectHandler {
-
-    private static final ScheduledExecutorService SCHEDULER =
-            Executors.newSingleThreadScheduledExecutor(r -> {
-                Thread t = new Thread(r, "architect-builder");
-                t.setDaemon(true);
-                return t;
-            });
 
     // Tracks ghost-preview block positions per player so they can be cleared.
     private static final ConcurrentHashMap<UUID, List<BlockPos>> PREVIEWS = new ConcurrentHashMap<>();
@@ -49,7 +39,7 @@ public class ArchitectHandler {
             showPreview(player, level, resolved);
         } else {
             clearPreview(player, level);
-            placeSequentially(player, resolved);
+            placeInstantly(player, resolved);
         }
     }
 
@@ -95,27 +85,14 @@ public class ArchitectHandler {
         return found.orElse(Blocks.STONE_BRICKS);
     }
 
-    private static final int BATCH_SIZE = 20;
-
-    private static void placeSequentially(ServerPlayer player, List<PlacedBlock> blocks) {
+    private static void placeInstantly(ServerPlayer player, List<PlacedBlock> blocks) {
         ServerLevel level = (ServerLevel) player.level();
         int total = blocks.size();
-        int batches = (int) Math.ceil((double) total / BATCH_SIZE);
-
-        for (int b = 0; b < batches; b++) {
-            final int start = b * BATCH_SIZE;
-            final int end   = Math.min(start + BATCH_SIZE, total);
-            SCHEDULER.schedule(
-                    () -> level.getServer().execute(() -> {
-                        for (int i = start; i < end; i++) {
-                            level.setBlock(blocks.get(i).pos(), blocks.get(i).block().defaultBlockState(), 3);
-                        }
-                        ServerPlayNetworking.send(player, new BuildProgressPayload(
-                                end, total, end == total));
-                    }),
-                    (long) b * 50, TimeUnit.MILLISECONDS
-            );
-        }
+        level.getServer().execute(() -> {
+            for (PlacedBlock pb : blocks)
+                level.setBlock(pb.pos(), pb.block().defaultBlockState(), 3);
+            ServerPlayNetworking.send(player, new BuildProgressPayload(total, total, true));
+        });
     }
 
     private record PlacedBlock(BlockPos pos, Block block) {}

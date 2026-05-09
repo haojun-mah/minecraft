@@ -42,6 +42,9 @@ class Settings(BaseSettings):
         description="How many hero-image candidates to request before picking one.",
     )
     openai_image_ranker_model: str = "gpt-4.1-mini"
+    openai_block_refine_model: str = "gpt-4.1-mini"
+    openai_block_refine_enabled: bool = True
+    block_palette_path: Path = Field(default=Path("./data/block_palette.json"))
 
 
 def get_settings() -> Settings:

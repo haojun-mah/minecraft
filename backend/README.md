@@ -219,6 +219,70 @@ See [`pipeline/encode.py`](pipeline/encode.py) `decode_rle_zyx`.
 
 ---
 
+## Post-3D Voxelization And Block Mapping
+
+After image-to-3D writes a mesh at:
+
+```text
+artifacts/{job_id}/model.glb
+```
+
+the backend now runs real post-3D processing instead of returning the hard-coded sample:
+
+```text
+model.glb
+-> trimesh voxelization
+-> RGB sampling
+-> nearest Minecraft block by CIE Lab color
+-> OpenAI semantic block remap
+-> compact palette + RLE response
+```
+
+### Size behavior
+
+`max_size` is a bounding box, not a forced cube. The mesh is scaled while preserving aspect ratio:
+
+```text
+scale = min(max_x / mesh_x, max_y / mesh_y, max_z / mesh_z)
+```
+
+That means the output `size` never exceeds the request. At least one limiting axis reaches the requested maximum for normal non-flat meshes.
+
+Example:
+
+```json
+{
+  "max_size": [48, 48, 48]
+}
+```
+
+could return:
+
+```json
+{
+  "size": [48, 31, 42]
+}
+```
+
+The frontend should always trust the returned `size`, not assume it equals `max_size`.
+
+### Backend artifacts
+
+For debugging and handoff to later stages, each job writes:
+
+```text
+artifacts/{job_id}/voxel_grid.npz       # filled bool grid + RGB grid
+artifacts/{job_id}/stage_a_blocks.npz   # nearest-color block IDs before semantic remap
+artifacts/{job_id}/block_refine.json    # OpenAI remap, histogram, reasoning/error
+artifacts/{job_id}/final_blocks.npz     # compact final palette indices
+```
+
+`minecraft:air` is always palette index `0` in the final API response.
+
+If OpenAI semantic refinement fails, the backend keeps the deterministic Stage A color mapping and still returns a build.
+
+---
+
 ## Research Handoff To GPT / Image Generation
 
 The best handoff format is **JSON, not Markdown**.

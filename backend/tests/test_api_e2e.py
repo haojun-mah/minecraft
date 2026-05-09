@@ -21,6 +21,7 @@ from main import app
 import pipeline.runner as pipeline_runner
 from pipeline.encode import decode_rle_zyx
 from storage.sample import SAMPLE_PALETTE, SAMPLE_SIZE, _build_sample_grid
+from storage.sample import build_sample_response
 
 
 _MINIMAL_PNG = base64.b64decode(
@@ -49,8 +50,18 @@ async def test_full_build_flow(monkeypatch):
         model_path.write_bytes(b"glb")
         return model_path
 
+    async def _fake_run_post_3d_pipeline(**kwargs):
+        build_request = kwargs["build_request"]
+        return build_sample_response(
+            job_id=kwargs["job_id"],
+            prompt=build_request.prompt,
+            hero_image_url=kwargs["hero_image_url"],
+            input_image_url=build_request.input_image_url,
+        )
+
     monkeypatch.setattr(pipeline_runner, "_generate_text_hero_image", _fake_generate_text_hero_image)
     monkeypatch.setattr(pipeline_runner, "_generate_fal_3d_model", _fake_generate_fal_3d_model)
+    monkeypatch.setattr(pipeline_runner, "_run_post_3d_pipeline", _fake_run_post_3d_pipeline)
 
     transport = httpx.ASGITransport(app=app)
     async with LifespanManager(app), httpx.AsyncClient(
@@ -100,7 +111,17 @@ async def test_image_build_flow_saves_upload_and_returns_static_url(monkeypatch)
         model_path.write_bytes(b"glb")
         return model_path
 
+    async def _fake_run_post_3d_pipeline(**kwargs):
+        build_request = kwargs["build_request"]
+        return build_sample_response(
+            job_id=kwargs["job_id"],
+            prompt=build_request.prompt,
+            hero_image_url=kwargs["hero_image_url"],
+            input_image_url=build_request.input_image_url,
+        )
+
     monkeypatch.setattr(pipeline_runner, "_generate_fal_3d_model", _fake_generate_fal_3d_model)
+    monkeypatch.setattr(pipeline_runner, "_run_post_3d_pipeline", _fake_run_post_3d_pipeline)
 
     transport = httpx.ASGITransport(app=app)
     async with LifespanManager(app), httpx.AsyncClient(

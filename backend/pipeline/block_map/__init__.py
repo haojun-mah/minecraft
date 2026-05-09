@@ -1,0 +1,1 @@
+"""Minecraft block mapping helpers."""

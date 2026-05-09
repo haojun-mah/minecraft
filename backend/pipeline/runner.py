@@ -10,6 +10,10 @@ from fastapi import Request
 
 from api.schemas import BuildRequest
 from config import get_settings
+from pipeline.block_map.apply import apply_semantic_remap, compact_block_grid, save_compacted_grid
+from pipeline.block_map.nearest import map_rgb_to_blocks, save_block_grid
+from pipeline.block_map.palette import load_block_palette
+from pipeline.block_map.semantic import semantic_refine_blocks
 from pipeline.generator3d.fal_trellis import FalTrellisGenerator3D
 from pipeline.image_gen.openai_image import (
     OpenAIImageGenerator,
@@ -18,17 +22,11 @@ from pipeline.image_gen.openai_image import (
 )
 from pipeline.research import research
 from pipeline.research_types import ResearchBundle
+from pipeline.structure_result import build_result_from_compacted_grid
+from pipeline.voxelize import save_voxelized_mesh, voxelize_mesh
 from storage.jobs import JobStore
-from storage.sample import build_sample_response
 
 logger = logging.getLogger(__name__)
-
-
-_POST_3D_STAGES_PHASE1: list[tuple[str, float, float]] = [
-    ("voxelizing", 0.78, 0.4),
-    ("block_mapping", 0.90, 0.3),
-    ("encoding", 0.98, 0.2),
-]
 
 
 async def run_pipeline(
@@ -46,6 +44,7 @@ async def run_pipeline(
     try:
         job_dir = artifacts_dir / job_id
         job_dir.mkdir(parents=True, exist_ok=True)
+        bundle: ResearchBundle | None = None
 
         if build_request.input_image_url:
             hero_image_url = build_request.input_image_url
@@ -84,18 +83,21 @@ async def run_pipeline(
             )
 
         store.update_status(job_id, status="running", stage="image_to_3d", progress=0.55)
-        await _generate_fal_3d_model(
+        model_path = await _generate_fal_3d_model(
             image_path=hero_path,
             output_dir=job_dir,
             seed=build_request.seed,
         )
-        await _simulate_pipeline(job_id, store, _POST_3D_STAGES_PHASE1)
 
-        result = build_sample_response(
+        result = await _run_post_3d_pipeline(
             job_id=job_id,
-            prompt=build_request.prompt,
+            build_request=build_request,
+            model_path=model_path,
+            job_dir=job_dir,
             hero_image_url=hero_image_url,
-            input_image_url=build_request.input_image_url,
+            research_bundle=bundle,
+            store=store,
+            settings=get_settings(),
         )
         store.set_result(job_id, result)
     except Exception as exc:  # noqa: BLE001 — top-level pipeline boundary
@@ -103,6 +105,50 @@ async def run_pipeline(
         store.update_status(
             job_id, status="error", stage="queued", progress=0.0, error=str(exc)
         )
+
+
+async def _run_post_3d_pipeline(
+    *,
+    job_id: str,
+    build_request: BuildRequest,
+    model_path: Path,
+    job_dir: Path,
+    hero_image_url: str | None,
+    research_bundle: ResearchBundle | None,
+    store: JobStore,
+    settings,
+):
+    store.update_status(job_id, status="running", stage="voxelizing", progress=0.70)
+    voxels = await asyncio.to_thread(voxelize_mesh, model_path, build_request.max_size)
+    save_voxelized_mesh(voxels, job_dir / "voxel_grid.npz")
+
+    store.update_status(job_id, status="running", stage="block_mapping", progress=0.82)
+    palette = load_block_palette(settings.block_palette_path)
+    stage_a = map_rgb_to_blocks(voxels, palette)
+    save_block_grid(stage_a, job_dir / "stage_a_blocks.npz")
+
+    semantic = await semantic_refine_blocks(
+        prompt=build_request.prompt,
+        style_hint=build_request.style_hint,
+        histogram=stage_a.histogram,
+        allowed_blocks=palette.block_ids,
+        research_bundle=research_bundle,
+        output_path=job_dir / "block_refine.json",
+        settings=settings,
+    )
+    final_grid = apply_semantic_remap(stage_a, semantic.remap)
+    compacted = compact_block_grid(final_grid)
+    save_compacted_grid(compacted, job_dir / "final_blocks.npz")
+
+    store.update_status(job_id, status="running", stage="encoding", progress=0.95)
+    await asyncio.sleep(0)
+    return build_result_from_compacted_grid(
+        job_id=job_id,
+        prompt=build_request.prompt,
+        compacted=compacted,
+        hero_image_url=hero_image_url,
+        input_image_url=build_request.input_image_url,
+    )
 
 
 async def _simulate_pipeline(

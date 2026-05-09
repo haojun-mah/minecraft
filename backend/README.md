@@ -2,7 +2,7 @@
 
 Generative-AI backend that turns a text prompt or an uploaded image into a Minecraft block structure. Sends back a compact JSON the frontend mod renders into the world.
 
-This document is the **API contract** your frontend mod consumes. The backend's pipeline (Exa research, GPT-4o vision planning, Fal Flux image generation, Fal Trellis image-to-3D, voxelization, block-mapping) is invisible to you.
+This document is the **API contract** your frontend mod consumes. The backend's pipeline (Exa research, GPT-4o vision planning, OpenAI GPT Image hero generation, image-to-3D, voxelization, block-mapping) is invisible to you.
 
 ## Phase 1 status
 
@@ -114,7 +114,7 @@ When `status == "done"`, the response is the **final build result**:
 }
 ```
 
-For text builds in Phase 1, `hero_image_url`, `preview_image_url`, and `input_image_url` are `null`.
+For text builds, `hero_image_url` points at the generated hero image under `/static/...`; the frozen sample response keeps it `null` so the example payload stays deterministic.
 For image uploads, `input_image_url` points at the saved source image under `/static/...`, and `hero_image_url` currently reuses that same static URL in the stub so the frontend can preview the upload immediately.
 
 ### `GET /healthz`
@@ -227,6 +227,6 @@ See the project plan for the full pipeline and phasing. Short version:
 
 - **Phase 1 (current):** Stubbed pipeline, real API contract, sample response, decoder docs.
 - **Phase 2:** OpenAI structured-output direct block generation (no 3D model).
-- **Phase 3:** Real pipeline — Exa research → GPT-4o vision plan → Fal Flux hero image → Fal Trellis image-to-3D → voxelize → block map.
+- **Phase 3:** Real pipeline — Exa research → GPT-4o vision plan → OpenAI GPT Image hero image → image-to-3D → voxelize → block map.
 - **Phase 4:** LLM semantic block refinement, isometric preview render, hollow-shell mode.
 - **Phase 5:** SQLite job store, disk caching, retries, Gemini & local fallbacks, structured logs.

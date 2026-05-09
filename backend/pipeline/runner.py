@@ -10,8 +10,15 @@ from __future__ import annotations
 import asyncio
 import logging
 from pathlib import Path
+from collections.abc import Awaitable, Callable
 
 from api.schemas import BuildRequest
+from config import get_settings
+from pipeline.image_gen.openai_image import (
+    OpenAIImageGenerator,
+    build_hero_prompt,
+    choose_hero_image_size,
+)
 from storage.jobs import JobStore
 from storage.sample import build_sample_response
 
@@ -48,13 +55,26 @@ async def run_pipeline(
     On failure, marks status=error with the exception message.
     """
     try:
-        stages = _IMAGE_STAGES_PHASE1 if request.input_image_url else _TEXT_STAGES_PHASE1
-        store.update_status(job_id, status="running", stage=stages[0][0], progress=0.0)
-        await _simulate_pipeline(job_id, store, stages)
+        if request.input_image_url:
+            store.update_status(job_id, status="running", stage="image_to_3d", progress=0.0)
+            await _simulate_pipeline(job_id, store, _IMAGE_STAGES_PHASE1)
+            hero_image_url = request.input_image_url
+        else:
+            store.update_status(job_id, status="running", stage="research", progress=0.0)
+            hero_image_url = await _simulate_pipeline(
+                job_id,
+                store,
+                _TEXT_STAGES_PHASE1,
+                on_image_gen=lambda: _generate_text_hero_image(
+                    job_id=job_id,
+                    request=request,
+                    artifacts_dir=artifacts_dir,
+                ),
+            )
         result = build_sample_response(
             job_id=job_id,
             prompt=request.prompt,
-            hero_image_url=request.input_image_url if request.input_image_url else None,
+            hero_image_url=hero_image_url,
             input_image_url=request.input_image_url,
         )
         store.set_result(job_id, result)
@@ -69,8 +89,31 @@ async def _simulate_pipeline(
     job_id: str,
     store: JobStore,
     stages: list[tuple[str, float, float]],
-) -> None:
+    on_image_gen: Callable[[], Awaitable[str]] | None = None,
+) -> str | None:
     """Phase-1 placeholder: walk through the same stages the real pipeline will."""
+    hero_image_url: str | None = None
     for stage, progress, delay_s in stages:
         await asyncio.sleep(delay_s)
         store.update_status(job_id, status="running", stage=stage, progress=progress)
+        if stage == "image_gen" and on_image_gen is not None:
+            hero_image_url = await on_image_gen()
+    return hero_image_url
+
+
+async def _generate_text_hero_image(
+    *,
+    job_id: str,
+    request: BuildRequest,
+    artifacts_dir: Path,
+) -> str:
+    settings = get_settings()
+    generator = OpenAIImageGenerator(settings=settings)
+    job_dir = artifacts_dir / job_id
+    hero_path = await generator.generate(
+        prompt=build_hero_prompt(request.prompt, request.style_hint),
+        output_dir=job_dir,
+        size=choose_hero_image_size(request.max_size),
+        candidate_count=settings.openai_image_candidate_count,
+    )
+    return f"/static/{job_id}/{hero_path.name}"

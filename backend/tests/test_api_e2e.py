@@ -19,6 +19,7 @@ from asgi_lifespan import LifespanManager
 
 from main import app
 from pipeline.encode import decode_rle_zyx
+import pipeline.runner as pipeline_runner
 from storage.sample import SAMPLE_PALETTE, SAMPLE_SIZE, _build_sample_grid
 
 
@@ -28,7 +29,24 @@ _MINIMAL_PNG = base64.b64decode(
 
 
 @pytest.mark.asyncio
-async def test_full_build_flow():
+async def test_full_build_flow(monkeypatch):
+    async def _fake_generate_text_hero_image(
+        *,
+        job_id: str,
+        request,
+        artifacts_dir: Path,
+    ) -> str:
+        hero_path = artifacts_dir / job_id / "hero.png"
+        hero_path.parent.mkdir(parents=True, exist_ok=True)
+        hero_path.write_bytes(_MINIMAL_PNG)
+        return f"/static/{job_id}/hero.png"
+
+    monkeypatch.setattr(
+        pipeline_runner,
+        "_generate_text_hero_image",
+        _fake_generate_text_hero_image,
+    )
+
     transport = httpx.ASGITransport(app=app)
     async with LifespanManager(app), httpx.AsyncClient(
         transport=transport, base_url="http://test"
@@ -56,6 +74,11 @@ async def test_full_build_flow():
         assert tuple(payload["size"]) == SAMPLE_SIZE
         assert payload["encoding"] == "rle-z-y-x"
         assert payload["input_image_url"] is None
+        assert payload["hero_image_url"] is not None
+
+        hero_response = await client.get(payload["hero_image_url"])
+        assert hero_response.status_code == 200
+        assert hero_response.headers["content-type"] == "image/png"
 
         decoded = decode_rle_zyx(payload["blocks"], SAMPLE_SIZE)
         assert decoded == _build_sample_grid()

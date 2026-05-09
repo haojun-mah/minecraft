@@ -1,7 +1,7 @@
 package com.example;
 
+import com.example.network.BuildBlocksPayload;
 import com.example.network.BuildProgressPayload;
-import com.example.network.BuildRequestPayload;
 import com.example.server.ArchitectHandler;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
@@ -16,12 +16,10 @@ public class ExampleMod implements ModInitializer {
 
     @Override
     public void onInitialize() {
-        // Register packet types (must happen before any networking)
-        PayloadTypeRegistry.playC2S().register(BuildRequestPayload.ID,  BuildRequestPayload.CODEC);
+        PayloadTypeRegistry.playC2S().register(BuildBlocksPayload.ID,  BuildBlocksPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(BuildProgressPayload.ID, BuildProgressPayload.CODEC);
 
-        // Server receives the prompt and starts building
-        ServerPlayNetworking.registerGlobalReceiver(BuildRequestPayload.ID, ArchitectHandler::handle);
+        ServerPlayNetworking.registerGlobalReceiver(BuildBlocksPayload.ID, ArchitectHandler::handle);
 
         LOGGER.info("[AI Architect] Mod initialised.");
     }

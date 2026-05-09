@@ -22,7 +22,10 @@ public class ExampleModClient implements ClientModInitializer {
                 KeyMapping.Category.MISC
         ));
 
+        GhostPreview.register();
+
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
+            GhostPreview.tick(client);
             if (openArchitectKey.consumeClick() && client.screen == null) {
                 client.setScreen(new ArchitectScreen());
             }

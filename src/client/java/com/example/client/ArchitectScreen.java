@@ -8,6 +8,7 @@ import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.KeyEvent;
+import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 
 import java.util.ArrayList;
@@ -54,10 +55,11 @@ public class ArchitectScreen extends Screen {
         promptField.setHint(Component.literal("e.g. medieval castle, cosy wood cabin..."));
         addRenderableWidget(promptField);
 
-        // X / Y / Z fields pre-filled with player's current block position
-        int bx = minecraft.player != null ? minecraft.player.getBlockX() : 0;
-        int by = minecraft.player != null ? minecraft.player.getBlockY() : 64;
-        int bz = minecraft.player != null ? minecraft.player.getBlockZ() : 0;
+        // X / Y / Z fields — prefer ghost origin (crosshair target) when available
+        BlockPos ghostOrigin = GhostPreview.isActive() ? GhostPreview.getOrigin() : null;
+        int bx = ghostOrigin != null ? ghostOrigin.getX() : (minecraft.player != null ? minecraft.player.getBlockX() : 0);
+        int by = ghostOrigin != null ? ghostOrigin.getY() : (minecraft.player != null ? minecraft.player.getBlockY() : 64);
+        int bz = ghostOrigin != null ? ghostOrigin.getZ() : (minecraft.player != null ? minecraft.player.getBlockZ() : 0);
 
         xField = buildCoordGroup(px, py + 72, 0, bx);
         yField = buildCoordGroup(px, py + 72, 1, by);
@@ -124,17 +126,24 @@ public class ArchitectScreen extends Screen {
             return;
         }
 
-        if (!preview) {
+        List<BuildBlockEntry> blocks = buildCottage(tx, ty, tz);
+
+        if (preview) {
+            // Client-side only — no server packet; ghost is walk-through
+            GhostPreview.setShape(blocks);
+            GhostPreview.setOrigin(new BlockPos(tx, ty, tz));
+            statusMessage = "Preview active — close screen to drag";
+        } else {
+            // Send real placement to server and clear ghost
+            GhostPreview.clear();
             generating = true;
-            placeButton.active  = false;
+            placeButton.active   = false;
             previewButton.active = false;
+            statusMessage = "Placing...";
+            placed = 0;
+            total  = 0;
+            ClientPlayNetworking.send(new BuildBlocksPayload(blocks, false));
         }
-
-        statusMessage = preview ? "Previewing..." : "Placing...";
-        placed = 0;
-        total  = 0;
-
-        ClientPlayNetworking.send(new BuildBlocksPayload(buildCottage(tx, ty, tz), preview));
     }
 
     /** 5×5×5 cottage at absolute world coordinates. */

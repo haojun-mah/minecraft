@@ -6,7 +6,7 @@ Turn a sentence into a Minecraft structure. Press **G** in-game, describe what y
 
 ## Demo
 
-<video src="https://youtu.be/lJ81ANBxTJU" width="100%"></video>
+<video src="[PASTE_GENERATED_URL_HERE](https://youtu.be/lJ81ANBxTJU)" width="100%"></video>
 
 ![Deathstar generated](image.png)
 

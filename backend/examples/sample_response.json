@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 {
   "job_id": "j_sample01",
   "status": "done",
@@ -24,3 +25,499 @@
   "preview_image_url": null,
   "input_image_url": null
 }
+=======
+[
+  {
+    "x": 0,
+    "y": 0,
+    "z": 0,
+    "block": "minecraft:cobblestone"
+  },
+  {
+    "x": 1,
+    "y": 0,
+    "z": 0,
+    "block": "minecraft:cobblestone"
+  },
+  {
+    "x": 2,
+    "y": 0,
+    "z": 0,
+    "block": "minecraft:cobblestone"
+  },
+  {
+    "x": 3,
+    "y": 0,
+    "z": 0,
+    "block": "minecraft:cobblestone"
+  },
+  {
+    "x": 4,
+    "y": 0,
+    "z": 0,
+    "block": "minecraft:cobblestone"
+  },
+  {
+    "x": 0,
+    "y": 1,
+    "z": 0,
+    "block": "minecraft:oak_planks"
+  },
+  {
+    "x": 1,
+    "y": 1,
+    "z": 0,
+    "block": "minecraft:oak_planks"
+  },
+  {
+    "x": 2,
+    "y": 1,
+    "z": 0,
+    "block": "minecraft:oak_planks"
+  },
+  {
+    "x": 3,
+    "y": 1,
+    "z": 0,
+    "block": "minecraft:oak_planks"
+  },
+  {
+    "x": 4,
+    "y": 1,
+    "z": 0,
+    "block": "minecraft:oak_planks"
+  },
+  {
+    "x": 0,
+    "y": 2,
+    "z": 0,
+    "block": "minecraft:oak_planks"
+  },
+  {
+    "x": 1,
+    "y": 2,
+    "z": 0,
+    "block": "minecraft:oak_planks"
+  },
+  {
+    "x": 2,
+    "y": 2,
+    "z": 0,
+    "block": "minecraft:oak_planks"
+  },
+  {
+    "x": 3,
+    "y": 2,
+    "z": 0,
+    "block": "minecraft:oak_planks"
+  },
+  {
+    "x": 4,
+    "y": 2,
+    "z": 0,
+    "block": "minecraft:oak_planks"
+  },
+  {
+    "x": 0,
+    "y": 3,
+    "z": 0,
+    "block": "minecraft:hay_block"
+  },
+  {
+    "x": 1,
+    "y": 3,
+    "z": 0,
+    "block": "minecraft:hay_block"
+  },
+  {
+    "x": 2,
+    "y": 3,
+    "z": 0,
+    "block": "minecraft:hay_block"
+  },
+  {
+    "x": 3,
+    "y": 3,
+    "z": 0,
+    "block": "minecraft:hay_block"
+  },
+  {
+    "x": 4,
+    "y": 3,
+    "z": 0,
+    "block": "minecraft:hay_block"
+  },
+  {
+    "x": 0,
+    "y": 0,
+    "z": 1,
+    "block": "minecraft:cobblestone"
+  },
+  {
+    "x": 1,
+    "y": 0,
+    "z": 1,
+    "block": "minecraft:cobblestone"
+  },
+  {
+    "x": 2,
+    "y": 0,
+    "z": 1,
+    "block": "minecraft:cobblestone"
+  },
+  {
+    "x": 3,
+    "y": 0,
+    "z": 1,
+    "block": "minecraft:cobblestone"
+  },
+  {
+    "x": 4,
+    "y": 0,
+    "z": 1,
+    "block": "minecraft:cobblestone"
+  },
+  {
+    "x": 0,
+    "y": 1,
+    "z": 1,
+    "block": "minecraft:oak_planks"
+  },
+  {
+    "x": 4,
+    "y": 1,
+    "z": 1,
+    "block": "minecraft:oak_planks"
+  },
+  {
+    "x": 0,
+    "y": 2,
+    "z": 1,
+    "block": "minecraft:oak_planks"
+  },
+  {
+    "x": 4,
+    "y": 2,
+    "z": 1,
+    "block": "minecraft:oak_planks"
+  },
+  {
+    "x": 0,
+    "y": 3,
+    "z": 1,
+    "block": "minecraft:hay_block"
+  },
+  {
+    "x": 1,
+    "y": 3,
+    "z": 1,
+    "block": "minecraft:hay_block"
+  },
+  {
+    "x": 2,
+    "y": 3,
+    "z": 1,
+    "block": "minecraft:hay_block"
+  },
+  {
+    "x": 3,
+    "y": 3,
+    "z": 1,
+    "block": "minecraft:hay_block"
+  },
+  {
+    "x": 4,
+    "y": 3,
+    "z": 1,
+    "block": "minecraft:hay_block"
+  },
+  {
+    "x": 0,
+    "y": 0,
+    "z": 2,
+    "block": "minecraft:cobblestone"
+  },
+  {
+    "x": 1,
+    "y": 0,
+    "z": 2,
+    "block": "minecraft:cobblestone"
+  },
+  {
+    "x": 2,
+    "y": 0,
+    "z": 2,
+    "block": "minecraft:cobblestone"
+  },
+  {
+    "x": 3,
+    "y": 0,
+    "z": 2,
+    "block": "minecraft:cobblestone"
+  },
+  {
+    "x": 4,
+    "y": 0,
+    "z": 2,
+    "block": "minecraft:cobblestone"
+  },
+  {
+    "x": 0,
+    "y": 1,
+    "z": 2,
+    "block": "minecraft:oak_planks"
+  },
+  {
+    "x": 4,
+    "y": 1,
+    "z": 2,
+    "block": "minecraft:oak_planks"
+  },
+  {
+    "x": 0,
+    "y": 2,
+    "z": 2,
+    "block": "minecraft:oak_planks"
+  },
+  {
+    "x": 4,
+    "y": 2,
+    "z": 2,
+    "block": "minecraft:oak_planks"
+  },
+  {
+    "x": 0,
+    "y": 3,
+    "z": 2,
+    "block": "minecraft:hay_block"
+  },
+  {
+    "x": 1,
+    "y": 3,
+    "z": 2,
+    "block": "minecraft:hay_block"
+  },
+  {
+    "x": 2,
+    "y": 3,
+    "z": 2,
+    "block": "minecraft:hay_block"
+  },
+  {
+    "x": 3,
+    "y": 3,
+    "z": 2,
+    "block": "minecraft:hay_block"
+  },
+  {
+    "x": 4,
+    "y": 3,
+    "z": 2,
+    "block": "minecraft:hay_block"
+  },
+  {
+    "x": 0,
+    "y": 0,
+    "z": 3,
+    "block": "minecraft:cobblestone"
+  },
+  {
+    "x": 1,
+    "y": 0,
+    "z": 3,
+    "block": "minecraft:cobblestone"
+  },
+  {
+    "x": 2,
+    "y": 0,
+    "z": 3,
+    "block": "minecraft:cobblestone"
+  },
+  {
+    "x": 3,
+    "y": 0,
+    "z": 3,
+    "block": "minecraft:cobblestone"
+  },
+  {
+    "x": 4,
+    "y": 0,
+    "z": 3,
+    "block": "minecraft:cobblestone"
+  },
+  {
+    "x": 0,
+    "y": 1,
+    "z": 3,
+    "block": "minecraft:oak_planks"
+  },
+  {
+    "x": 4,
+    "y": 1,
+    "z": 3,
+    "block": "minecraft:oak_planks"
+  },
+  {
+    "x": 0,
+    "y": 2,
+    "z": 3,
+    "block": "minecraft:oak_planks"
+  },
+  {
+    "x": 4,
+    "y": 2,
+    "z": 3,
+    "block": "minecraft:oak_planks"
+  },
+  {
+    "x": 0,
+    "y": 3,
+    "z": 3,
+    "block": "minecraft:hay_block"
+  },
+  {
+    "x": 1,
+    "y": 3,
+    "z": 3,
+    "block": "minecraft:hay_block"
+  },
+  {
+    "x": 2,
+    "y": 3,
+    "z": 3,
+    "block": "minecraft:hay_block"
+  },
+  {
+    "x": 3,
+    "y": 3,
+    "z": 3,
+    "block": "minecraft:hay_block"
+  },
+  {
+    "x": 4,
+    "y": 3,
+    "z": 3,
+    "block": "minecraft:hay_block"
+  },
+  {
+    "x": 0,
+    "y": 0,
+    "z": 4,
+    "block": "minecraft:cobblestone"
+  },
+  {
+    "x": 1,
+    "y": 0,
+    "z": 4,
+    "block": "minecraft:cobblestone"
+  },
+  {
+    "x": 2,
+    "y": 0,
+    "z": 4,
+    "block": "minecraft:cobblestone"
+  },
+  {
+    "x": 3,
+    "y": 0,
+    "z": 4,
+    "block": "minecraft:cobblestone"
+  },
+  {
+    "x": 4,
+    "y": 0,
+    "z": 4,
+    "block": "minecraft:cobblestone"
+  },
+  {
+    "x": 0,
+    "y": 1,
+    "z": 4,
+    "block": "minecraft:oak_planks"
+  },
+  {
+    "x": 1,
+    "y": 1,
+    "z": 4,
+    "block": "minecraft:oak_planks"
+  },
+  {
+    "x": 2,
+    "y": 1,
+    "z": 4,
+    "block": "minecraft:oak_planks"
+  },
+  {
+    "x": 3,
+    "y": 1,
+    "z": 4,
+    "block": "minecraft:oak_planks"
+  },
+  {
+    "x": 4,
+    "y": 1,
+    "z": 4,
+    "block": "minecraft:oak_planks"
+  },
+  {
+    "x": 0,
+    "y": 2,
+    "z": 4,
+    "block": "minecraft:oak_planks"
+  },
+  {
+    "x": 1,
+    "y": 2,
+    "z": 4,
+    "block": "minecraft:oak_planks"
+  },
+  {
+    "x": 2,
+    "y": 2,
+    "z": 4,
+    "block": "minecraft:oak_planks"
+  },
+  {
+    "x": 3,
+    "y": 2,
+    "z": 4,
+    "block": "minecraft:oak_planks"
+  },
+  {
+    "x": 4,
+    "y": 2,
+    "z": 4,
+    "block": "minecraft:oak_planks"
+  },
+  {
+    "x": 0,
+    "y": 3,
+    "z": 4,
+    "block": "minecraft:hay_block"
+  },
+  {
+    "x": 1,
+    "y": 3,
+    "z": 4,
+    "block": "minecraft:hay_block"
+  },
+  {
+    "x": 2,
+    "y": 3,
+    "z": 4,
+    "block": "minecraft:hay_block"
+  },
+  {
+    "x": 3,
+    "y": 3,
+    "z": 4,
+    "block": "minecraft:hay_block"
+  },
+  {
+    "x": 4,
+    "y": 3,
+    "z": 4,
+    "block": "minecraft:hay_block"
+  }
+]
+>>>>>>> origin/frontend

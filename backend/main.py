@@ -10,7 +10,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from api.builds import router as builds_router
+<<<<<<< HEAD
 from api.debug import router as debug_router
+=======
+from api.generate import router as generate_router
+>>>>>>> origin/frontend
 from api.health import router as health_router
 from config import get_settings
 from storage.jobs import JobStore
@@ -53,7 +57,11 @@ app.add_middleware(
 )
 app.include_router(health_router)
 app.include_router(builds_router)
+<<<<<<< HEAD
 app.include_router(debug_router)
+=======
+app.include_router(generate_router)
+>>>>>>> origin/frontend
 app.mount(
     "/static",
     StaticFiles(directory=str(_settings.artifacts_dir), check_dir=False),

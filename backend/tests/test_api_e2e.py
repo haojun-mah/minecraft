@@ -8,8 +8,13 @@ Confirms that:
 """
 from __future__ import annotations
 
+<<<<<<< HEAD
 import asyncio
 import base64
+=======
+import base64
+import asyncio
+>>>>>>> origin/frontend
 import json
 from pathlib import Path
 
@@ -155,9 +160,12 @@ async def test_image_build_flow_saves_upload_and_returns_static_url(monkeypatch)
         assert image_response.status_code == 200
         assert image_response.headers["content-type"] == "image/png"
 
+<<<<<<< HEAD
         model_path = Path(app.state.artifacts_dir) / job_id / "model.glb"
         assert model_path.exists()
 
+=======
+>>>>>>> origin/frontend
         assert payload["palette"] == SAMPLE_PALETTE
         assert tuple(payload["size"]) == SAMPLE_SIZE
         assert payload["encoding"] == "rle-z-y-x"
@@ -169,7 +177,11 @@ async def test_image_build_flow_saves_upload_and_returns_static_url(monkeypatch)
 def test_frozen_sample_response_matches_live():
     sample_path = Path(__file__).resolve().parent.parent / "examples" / "sample_response.json"
     data = json.loads(sample_path.read_text())
+<<<<<<< HEAD
     assert data["palette"] == SAMPLE_PALETTE
     assert tuple(data["size"]) == SAMPLE_SIZE
     decoded = decode_rle_zyx(data["blocks"], SAMPLE_SIZE)
     assert decoded == _build_sample_grid()
+=======
+    assert data == build_sample_flat_blocks()
+>>>>>>> origin/frontend

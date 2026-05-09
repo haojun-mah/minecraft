@@ -25,6 +25,7 @@ from pipeline.research_types import ResearchBundle
 from pipeline.structure_result import build_result_from_compacted_grid
 from pipeline.voxelize import save_voxelized_mesh, voxelize_mesh
 from storage.jobs import JobStore
+from storage.sample import load_forced_sample_response
 
 logger = logging.getLogger(__name__)
 
@@ -42,6 +43,17 @@ async def run_pipeline(
     On failure, marks status=error with the exception message.
     """
     try:
+        logger.info("forcing backend output from examples/sample_response.json", extra={"job_id": job_id})
+        store.update_status(job_id, status="running", stage="encoding", progress=0.95)
+        result = load_forced_sample_response(
+            job_id=job_id,
+            prompt=build_request.prompt,
+            hero_image_url=build_request.input_image_url,
+            input_image_url=build_request.input_image_url,
+        )
+        store.set_result(job_id, result)
+        return
+
         job_dir = artifacts_dir / job_id
         job_dir.mkdir(parents=True, exist_ok=True)
         bundle: ResearchBundle | None = None

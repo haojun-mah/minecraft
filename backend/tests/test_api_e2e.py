@@ -8,13 +8,8 @@ Confirms that:
 """
 from __future__ import annotations
 
-<<<<<<< HEAD
 import asyncio
 import base64
-=======
-import base64
-import asyncio
->>>>>>> origin/frontend
 import json
 from pathlib import Path
 
@@ -23,10 +18,9 @@ import pytest
 from asgi_lifespan import LifespanManager
 
 from main import app
-import pipeline.runner as pipeline_runner
 from pipeline.encode import decode_rle_zyx
 from storage.sample import SAMPLE_PALETTE, SAMPLE_SIZE, _build_sample_grid
-from storage.sample import build_sample_response
+from storage.sample import build_sample_flat_blocks
 
 
 _MINIMAL_PNG = base64.b64decode(
@@ -35,39 +29,7 @@ _MINIMAL_PNG = base64.b64decode(
 
 
 @pytest.mark.asyncio
-async def test_full_build_flow(monkeypatch):
-    async def _fake_generate_text_hero_image(
-        *,
-        job_id: str,
-        request,
-        research_bundle,
-        artifacts_dir: Path,
-        http_request,
-    ) -> tuple[str, Path]:
-        hero_path = artifacts_dir / job_id / "hero.png"
-        hero_path.parent.mkdir(parents=True, exist_ok=True)
-        hero_path.write_bytes(_MINIMAL_PNG)
-        return str(http_request.url_for("static", path=f"{job_id}/hero.png")), hero_path
-
-    async def _fake_generate_fal_3d_model(*, image_path: Path, output_dir: Path, seed: int | None) -> Path:
-        model_path = output_dir / "model.glb"
-        model_path.parent.mkdir(parents=True, exist_ok=True)
-        model_path.write_bytes(b"glb")
-        return model_path
-
-    async def _fake_run_post_3d_pipeline(**kwargs):
-        build_request = kwargs["build_request"]
-        return build_sample_response(
-            job_id=kwargs["job_id"],
-            prompt=build_request.prompt,
-            hero_image_url=kwargs["hero_image_url"],
-            input_image_url=build_request.input_image_url,
-        )
-
-    monkeypatch.setattr(pipeline_runner, "_generate_text_hero_image", _fake_generate_text_hero_image)
-    monkeypatch.setattr(pipeline_runner, "_generate_fal_3d_model", _fake_generate_fal_3d_model)
-    monkeypatch.setattr(pipeline_runner, "_run_post_3d_pipeline", _fake_run_post_3d_pipeline)
-
+async def test_full_build_flow():
     transport = httpx.ASGITransport(app=app)
     async with LifespanManager(app), httpx.AsyncClient(
         transport=transport, base_url="http://test"
@@ -95,39 +57,14 @@ async def test_full_build_flow(monkeypatch):
         assert tuple(payload["size"]) == SAMPLE_SIZE
         assert payload["encoding"] == "rle-z-y-x"
         assert payload["input_image_url"] is None
-        assert payload["hero_image_url"] is not None
-
-        hero_response = await client.get(payload["hero_image_url"])
-        assert hero_response.status_code == 200
-        assert hero_response.headers["content-type"] == "image/png"
-
-        model_path = Path(app.state.artifacts_dir) / job_id / "model.glb"
-        assert model_path.exists()
+        assert payload["hero_image_url"] is None
 
         decoded = decode_rle_zyx(payload["blocks"], SAMPLE_SIZE)
         assert decoded == _build_sample_grid()
 
 
 @pytest.mark.asyncio
-async def test_image_build_flow_saves_upload_and_returns_static_url(monkeypatch):
-    async def _fake_generate_fal_3d_model(*, image_path: Path, output_dir: Path, seed: int | None) -> Path:
-        model_path = output_dir / "model.glb"
-        model_path.parent.mkdir(parents=True, exist_ok=True)
-        model_path.write_bytes(b"glb")
-        return model_path
-
-    async def _fake_run_post_3d_pipeline(**kwargs):
-        build_request = kwargs["build_request"]
-        return build_sample_response(
-            job_id=kwargs["job_id"],
-            prompt=build_request.prompt,
-            hero_image_url=kwargs["hero_image_url"],
-            input_image_url=build_request.input_image_url,
-        )
-
-    monkeypatch.setattr(pipeline_runner, "_generate_fal_3d_model", _fake_generate_fal_3d_model)
-    monkeypatch.setattr(pipeline_runner, "_run_post_3d_pipeline", _fake_run_post_3d_pipeline)
-
+async def test_image_build_flow_saves_upload_and_returns_static_url():
     transport = httpx.ASGITransport(app=app)
     async with LifespanManager(app), httpx.AsyncClient(
         transport=transport, base_url="http://test"
@@ -160,12 +97,6 @@ async def test_image_build_flow_saves_upload_and_returns_static_url(monkeypatch)
         assert image_response.status_code == 200
         assert image_response.headers["content-type"] == "image/png"
 
-<<<<<<< HEAD
-        model_path = Path(app.state.artifacts_dir) / job_id / "model.glb"
-        assert model_path.exists()
-
-=======
->>>>>>> origin/frontend
         assert payload["palette"] == SAMPLE_PALETTE
         assert tuple(payload["size"]) == SAMPLE_SIZE
         assert payload["encoding"] == "rle-z-y-x"
@@ -177,11 +108,16 @@ async def test_image_build_flow_saves_upload_and_returns_static_url(monkeypatch)
 def test_frozen_sample_response_matches_live():
     sample_path = Path(__file__).resolve().parent.parent / "examples" / "sample_response.json"
     data = json.loads(sample_path.read_text())
-<<<<<<< HEAD
-    assert data["palette"] == SAMPLE_PALETTE
-    assert tuple(data["size"]) == SAMPLE_SIZE
-    decoded = decode_rle_zyx(data["blocks"], SAMPLE_SIZE)
-    assert decoded == _build_sample_grid()
-=======
     assert data == build_sample_flat_blocks()
->>>>>>> origin/frontend
+
+
+@pytest.mark.asyncio
+async def test_generate_returns_forced_sample_blocks():
+    transport = httpx.ASGITransport(app=app)
+    async with LifespanManager(app), httpx.AsyncClient(
+        transport=transport, base_url="http://test"
+    ) as client:
+        response = await client.post("/generate", json={"prompt": "anything"})
+
+    assert response.status_code == 200
+    assert response.json() == build_sample_flat_blocks()

@@ -121,6 +121,44 @@ For image uploads, `input_image_url` points at the saved source image under `/st
 
 Returns `{ "status": "ok" }`.
 
+### `GET /debug/research?prompt=...`
+
+Runs only the Exa research stage and returns the machine-readable research bundle. This is for backend debugging and for the next pipeline agent to verify the research output before wiring GPT/OpenAI image generation.
+
+```bash
+curl "http://127.0.0.1:8000/debug/research?prompt=a%20medieval%20cottage" | jq
+```
+
+Browser UI:
+
+```text
+http://127.0.0.1:8000/debug/research-ui
+```
+
+The response intentionally does **not** expose source websites. It returns architectural visual descriptions and locally saved reference images:
+
+```json
+{
+  "prompt": "a medieval cottage",
+  "visual_descriptions": [
+    {
+      "description": "Architectural visual detail: steep thatched roof, timber framing, stone base..."
+    }
+  ],
+  "images": [
+    {
+      "path": "artifacts/j_abc123/refs/ref_0.jpg",
+      "width": 1024,
+      "height": 768,
+      "static_url": "/static/j_abc123/refs/ref_0.jpg",
+      "description": "Architectural visual detail: timber walls, straw roof, small window openings..."
+    }
+  ],
+  "cached": false,
+  "manifest_path": "artifacts/j_abc123/research_bundle.json"
+}
+```
+
 ### Errors
 
 - `404 Not Found` — unknown `job_id`.
@@ -178,6 +216,108 @@ static int[][][] decode(String blocksB64, int sizeX, int sizeY, int sizeZ) {
 ### Reference Python decoder (also used in tests)
 
 See [`pipeline/encode.py`](pipeline/encode.py) `decode_rle_zyx`.
+
+---
+
+## Research Handoff To GPT / Image Generation
+
+The best handoff format is **JSON, not Markdown**.
+
+Use Markdown only as a human debug artifact if needed. The actual pipeline should pass structured data from `research_bundle.json` into the next stage because JSON is stable, typed, and easy for another agent or Python module to load without parsing prose.
+
+### Fixed artifact layout
+
+For every text build job, Exa research writes deterministic per-job files:
+
+```text
+artifacts/{job_id}/research_bundle.json
+artifacts/{job_id}/refs/ref_0.jpg
+artifacts/{job_id}/refs/ref_1.jpg
+artifacts/{job_id}/refs/ref_2.jpg
+artifacts/{job_id}/refs/ref_3.jpg
+```
+
+There is no timestamp in the file names. Later stages can reliably pick up the manifest by `job_id`.
+
+### Python handoff contract
+
+The next stage should load the bundle through the helper:
+
+```python
+from pipeline.research import load_research_bundle
+
+bundle = load_research_bundle(
+    artifacts_dir=artifacts_dir,
+    job_id=job_id,
+)
+
+descriptions = [item.description for item in bundle.visual_descriptions]
+image_paths = [image.path for image in bundle.images]
+```
+
+The data model is:
+
+```python
+class ResearchBundle(BaseModel):
+    prompt: str
+    visual_descriptions: list[VisualDescription]
+    images: list[ReferenceImage]
+    cached: bool
+    manifest_path: Path | None
+
+class ReferenceImage(BaseModel):
+    path: Path
+    width: int
+    height: int
+    static_url: str
+    description: str
+```
+
+### Recommended OpenAI image-generation prompt assembly
+
+The next agent should build a single image-generation prompt from:
+
+1. The user's original `bundle.prompt`
+2. The architectural visual descriptions
+3. A strict instruction to produce one clean hero image for image-to-3D
+
+Recommended template:
+
+```text
+Create a single clean reference image for image-to-3D generation.
+
+Subject:
+{bundle.prompt}
+
+Architectural visual details:
+- {bundle.visual_descriptions[0].description}
+- {bundle.visual_descriptions[1].description}
+- ...
+
+Image requirements:
+- single complete subject
+- three-quarter exterior view
+- plain white or transparent background
+- even studio lighting
+- no people
+- no text, labels, watermark, UI, or collage
+- show the full silhouette
+- emphasize roof, walls, doors, windows, proportions, materials, and decorative trim
+- blocky, readable shapes suitable for Minecraft voxelization
+```
+
+If using a multimodal model before image generation, pass `bundle.images[*].path` as reference images and the same text above as context. If using a text-only image model, pass only the assembled prompt.
+
+### Why not Markdown?
+
+Markdown is useful for humans, but it is a poor machine contract:
+
+- another stage has to parse bullets/headings from prose
+- image paths are easier to lose or rename
+- tests cannot validate the fields cleanly
+- future fields like `preferred_blocks`, `style`, or `quality_score` become awkward
+
+Use `research_bundle.json` as the source of truth. A Markdown summary can be generated later for debugging, but downstream stages should not depend on it.
 
 ---
 

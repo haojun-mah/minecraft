@@ -25,6 +25,9 @@ class Settings(BaseSettings):
     openai_api_key: str | None = None
     gemini_api_key: str | None = None
     exa_api_key: str | None = None
+    exa_num_results: int = 8
+    exa_image_links_per_result: int = 3
+    exa_cache_ttl_days: int = 7
     fal_key: str | None = None
 
     openai_image_model: str = "gpt-image-1"

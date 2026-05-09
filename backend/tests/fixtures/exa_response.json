@@ -1,0 +1,71 @@
+{
+  "results": [
+    {
+      "title": "Medieval cottage architecture guide",
+      "url": "https://example.com/medieval-cottage",
+      "highlights": [
+        "A medieval cottage often uses timber framing, stone foundations, and a steep thatched roof.",
+        "Common colors include warm brown wood, pale plaster walls, gray stone, and golden straw."
+      ],
+      "image": "https://images.example.com/cottage-main.jpg",
+      "extras": {
+        "imageLinks": [
+          "https://images.example.com/cottage-side.png",
+          "https://images.example.com/cottage-logo.svg"
+        ]
+      }
+    },
+    {
+      "title": "Thatched roof farmhouse references",
+      "url": "https://example.com/thatched-roof",
+      "highlights": [
+        "Thatched roofs have rounded edges and layered straw textures.",
+        "The roof mass is usually larger than the wall mass, creating a cozy silhouette."
+      ],
+      "image": "https://images.example.com/roof.webp",
+      "extras": {
+        "imageLinks": [
+          "https://images.example.com/favicon-cottage.jpg",
+          "https://images.example.com/detail.jpeg"
+        ]
+      }
+    },
+    {
+      "title": "Minecraft-style cottage ideas",
+      "url": "https://example.com/minecraft-cottage",
+      "text": "Blocky cottages use oak logs, planks, cobblestone, stairs, slabs, and hay blocks.",
+      "highlights": [
+        "Minecraft cottage builds usually exaggerate the roof and keep the walls compact."
+      ],
+      "image": "https://images.example.com/minecraft-cottage.jpg",
+      "extras": {
+        "imageLinks": [
+          "https://images.example.com/minecraft-cottage-alt.png",
+          "https://images.example.com/tracking-pixel.jpg"
+        ]
+      }
+    },
+    {
+      "title": "Historic timber framing",
+      "url": "https://example.com/timber-framing",
+      "highlights": [
+        "Timber framing creates strong vertical and diagonal dark wood lines across pale wall panels."
+      ],
+      "image": null,
+      "extras": {
+        "imageLinks": []
+      }
+    },
+    {
+      "title": "Stone chimney references",
+      "url": "https://example.com/stone-chimney",
+      "highlights": [
+        "Small medieval homes often have a rough gray stone chimney rising above one side of the roof."
+      ],
+      "image": null,
+      "extras": {
+        "imageLinks": []
+      }
+    }
+  ]
+}

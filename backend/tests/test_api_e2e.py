@@ -20,7 +20,7 @@ from asgi_lifespan import LifespanManager
 from main import app
 from pipeline.encode import decode_rle_zyx
 import pipeline.runner as pipeline_runner
-from storage.sample import SAMPLE_PALETTE, SAMPLE_SIZE, _build_sample_grid
+from storage.sample import SAMPLE_PALETTE, SAMPLE_SIZE, _build_sample_grid, build_sample_flat_blocks
 
 
 _MINIMAL_PNG = base64.b64decode(
@@ -129,7 +129,4 @@ async def test_image_build_flow_saves_upload_and_returns_static_url():
 def test_frozen_sample_response_matches_live():
     sample_path = Path(__file__).resolve().parent.parent / "examples" / "sample_response.json"
     data = json.loads(sample_path.read_text())
-    assert data["palette"] == SAMPLE_PALETTE
-    assert tuple(data["size"]) == SAMPLE_SIZE
-    decoded = decode_rle_zyx(data["blocks"], SAMPLE_SIZE)
-    assert decoded == _build_sample_grid()
+    assert data == build_sample_flat_blocks()

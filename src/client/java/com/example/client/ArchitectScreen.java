@@ -12,6 +12,8 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.Collections;
 import java.util.List;
 
 public class ArchitectScreen extends Screen {
@@ -34,6 +36,8 @@ public class ArchitectScreen extends Screen {
     private String  statusMessage = "";
     private int     placed = 0, total = 0;
     private boolean generating = false;
+    private String  cachedPrompt = "";
+    private List<BuildBlockEntry> cachedRelativeBlocks = List.of();
 
     public ArchitectScreen() {
         super(Component.literal("AI Architect"));
@@ -116,6 +120,12 @@ public class ArchitectScreen extends Screen {
     private void sendBlocks(boolean preview) {
         if (generating) return;
 
+        String prompt = promptField.getValue().trim();
+        if (prompt.isEmpty()) {
+            statusMessage = "Error: prompt cannot be empty";
+            return;
+        }
+
         int tx, ty, tz;
         try {
             tx = Integer.parseInt(xField.getValue().trim());
@@ -126,41 +136,107 @@ public class ArchitectScreen extends Screen {
             return;
         }
 
-        List<BuildBlockEntry> blocks = buildCottage(tx, ty, tz);
-
-        if (preview) {
-            // Client-side only — no server packet; ghost is walk-through
-            GhostPreview.setShape(blocks);
-            GhostPreview.setOrigin(new BlockPos(tx, ty, tz));
-            statusMessage = "Preview active — close screen to drag";
+        if (prompt.equals(cachedPrompt) && !cachedRelativeBlocks.isEmpty()) {
+            applyGeneratedBlocks(cachedRelativeBlocks, tx, ty, tz, preview);
         } else {
-            // Send real placement to server and clear ghost
-            GhostPreview.clear();
-            generating = true;
-            placeButton.active   = false;
-            previewButton.active = false;
-            statusMessage = "Placing...";
-            placed = 0;
-            total  = 0;
-            ClientPlayNetworking.send(new BuildBlocksPayload(blocks, false));
+            requestBlocks(prompt, tx, ty, tz, preview);
         }
     }
 
-    /** 5×5×5 cottage at absolute world coordinates. */
-    private static List<BuildBlockEntry> buildCottage(int ox, int oy, int oz) {
-        List<BuildBlockEntry> b = new ArrayList<>();
-        for (int x = 0; x < 5; x++)
-            for (int z = 0; z < 5; z++)
-                b.add(new BuildBlockEntry(ox+x, oy,   oz+z, "minecraft:cobblestone"));
-        for (int y = 1; y <= 2; y++)
-            for (int x = 0; x < 5; x++)
-                for (int z = 0; z < 5; z++)
-                    if (x==0||x==4||z==0||z==4)
-                        b.add(new BuildBlockEntry(ox+x, oy+y, oz+z, "minecraft:oak_planks"));
-        for (int x = 0; x < 5; x++)
-            for (int z = 0; z < 5; z++)
-                b.add(new BuildBlockEntry(ox+x, oy+3, oz+z, "minecraft:hay_block"));
-        return b;
+    private void requestBlocks(String prompt, int tx, int ty, int tz, boolean preview) {
+        generating = true;
+        setButtonsEnabled(false);
+        statusMessage = preview ? "Generating preview..." : "Generating build...";
+        placed = 0;
+        total = 0;
+
+        if (minecraft == null) {
+            generating = false;
+            setButtonsEnabled(true);
+            statusMessage = "Minecraft client unavailable";
+            return;
+        }
+
+        BackendClient.generateBlocks(prompt).whenComplete((blocks, error) -> minecraft.execute(() -> {
+            if (error != null) {
+                generating = false;
+                setButtonsEnabled(true);
+                statusMessage = formatError(error);
+                return;
+            }
+
+            if (blocks.isEmpty()) {
+                generating = false;
+                setButtonsEnabled(true);
+                statusMessage = "Backend returned no blocks";
+                return;
+            }
+
+            cachedPrompt = prompt;
+            cachedRelativeBlocks = List.copyOf(blocks);
+            applyGeneratedBlocks(cachedRelativeBlocks, tx, ty, tz, preview);
+        }));
+    }
+
+    private void applyGeneratedBlocks(List<BuildBlockEntry> relativeBlocks, int tx, int ty, int tz, boolean preview) {
+        List<BuildBlockEntry> absoluteBlocks = translateBlocks(relativeBlocks, tx, ty, tz);
+        if (preview) {
+            BlockPos anchor = minPos(absoluteBlocks);
+            GhostPreview.setShape(absoluteBlocks);
+            GhostPreview.setOrigin(anchor);
+            generating = false;
+            setButtonsEnabled(true);
+            statusMessage = "Preview ready — close screen to drag";
+        } else {
+            startPlacement(absoluteBlocks);
+        }
+    }
+
+    private void startPlacement(List<BuildBlockEntry> blocks) {
+        GhostPreview.clear();
+        generating = true;
+        setButtonsEnabled(false);
+        statusMessage = "Placing...";
+        placed = 0;
+        total = blocks.size();
+        ClientPlayNetworking.send(new BuildBlocksPayload(blocks, false));
+    }
+
+    private void setButtonsEnabled(boolean enabled) {
+        previewButton.active = enabled;
+        placeButton.active = enabled;
+    }
+
+    private static List<BuildBlockEntry> translateBlocks(List<BuildBlockEntry> blocks, int ox, int oy, int oz) {
+        List<BuildBlockEntry> translated = new ArrayList<>(blocks.size());
+        for (BuildBlockEntry block : blocks) {
+            translated.add(new BuildBlockEntry(
+                    ox + block.x(),
+                    oy + block.y(),
+                    oz + block.z(),
+                    block.block()
+            ));
+        }
+        return translated;
+    }
+
+    private static BlockPos minPos(List<BuildBlockEntry> blocks) {
+        BuildBlockEntry min = Collections.min(
+                blocks,
+                Comparator.comparingInt(BuildBlockEntry::x)
+                        .thenComparingInt(BuildBlockEntry::y)
+                        .thenComparingInt(BuildBlockEntry::z)
+        );
+        return new BlockPos(min.x(), min.y(), min.z());
+    }
+
+    private static String formatError(Throwable error) {
+        Throwable current = error;
+        while (current.getCause() != null) {
+            current = current.getCause();
+        }
+        String message = current.getMessage();
+        return (message == null || message.isBlank()) ? "Backend request failed" : message;
     }
 
     // -------------------------------------------------------------------------

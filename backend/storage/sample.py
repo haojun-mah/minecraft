@@ -1,4 +1,4 @@
-"""Hard-coded sample response used by Phase 1 and `scripts/freeze_sample.py`.
+"""Hard-coded sample data used by Phase 1 and `scripts/freeze_sample.py`.
 
 Builds a tiny 5x5x5 cottage:
     y=0       cobblestone floor (5x5)
@@ -12,6 +12,7 @@ the decode pipeline before the real generative pipeline is ready.
 from __future__ import annotations
 
 from api.schemas import BuildResult
+from pipeline.encode import decode_rle_zyx
 from pipeline.encode import encode_rle_zyx
 
 
@@ -61,3 +62,28 @@ def build_sample_response(
         preview_image_url=preview_image_url,
         input_image_url=input_image_url,
     )
+
+
+def build_sample_flat_blocks() -> list[dict[str, int | str]]:
+    """Return the sample structure as frontend-ready flat block entries."""
+    result = build_sample_response(job_id="j_sample01", prompt="sample")
+    grid = decode_rle_zyx(result.blocks, result.size)
+    sx, sy, sz = result.size
+    ox, oy, oz = result.origin
+
+    blocks: list[dict[str, int | str]] = []
+    for z in range(sz):
+        for y in range(sy):
+            for x in range(sx):
+                block = result.palette[grid[x][y][z]]
+                if block == "minecraft:air":
+                    continue
+                blocks.append(
+                    {
+                        "x": x + ox,
+                        "y": y + oy,
+                        "z": z + oz,
+                        "block": block,
+                    }
+                )
+    return blocks

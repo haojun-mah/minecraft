@@ -8,7 +8,7 @@ This document is the **API contract** your frontend mod consumes. The backend's 
 
 The pipeline is **stubbed**: `POST /builds` accepts a real request, walks through the same status stages the real pipeline will, and after a few seconds returns a hard-coded sample response (a small 5x5x5 cottage). `POST /builds/from-image` does the same thing for an uploaded image and stores the upload under `artifacts/` so the frontend can show it immediately. This lets the frontend be built and tested end-to-end before the real generative pipeline lands.
 
-A frozen example is committed at [`examples/sample_response.json`](examples/sample_response.json) so the renderer can be developed without running the server at all.
+A frozen frontend-ready example is committed at [`examples/sample_response.json`](examples/sample_response.json) so the mod can be developed without running the server at all.
 
 ---
 
@@ -114,7 +114,7 @@ When `status == "done"`, the response is the **final build result**:
 }
 ```
 
-For text builds, `hero_image_url` points at the generated hero image under `/static/...`; the frozen sample response keeps it `null` so the example payload stays deterministic.
+For text builds, `hero_image_url` points at the generated hero image under `/static/...`.
 For image uploads, `input_image_url` points at the saved source image under `/static/...`, and `hero_image_url` currently reuses that same static URL in the stub so the frontend can preview the upload immediately.
 
 ### `GET /healthz`
@@ -197,7 +197,7 @@ curl -s -X POST http://127.0.0.1:8000/builds \
 curl -s http://127.0.0.1:8000/builds/j_xyz | jq .
 ```
 
-You can also use `examples/sample_response.json` directly to develop the renderer without running the server.
+You can also use `examples/sample_response.json` directly as a flat `/generate`-style response without running the server.
 
 ---
 

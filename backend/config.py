@@ -25,18 +25,12 @@ class Settings(BaseSettings):
     openai_api_key: str | None = None
     gemini_api_key: str | None = None
     exa_api_key: str | None = None
-<<<<<<< HEAD
     exa_num_results: int = 8
     exa_image_links_per_result: int = 3
     exa_cache_ttl_days: int = 7
     fal_key: str | None = None
 
     openai_image_model: str = "gpt-image-1"
-=======
-    fal_key: str | None = None
-
-    openai_image_model: str = "gpt-image-2"
->>>>>>> origin/frontend
     openai_image_quality: Literal["low", "medium", "high", "auto"] = "medium"
     openai_image_output_format: Literal["png", "jpeg", "webp"] = "png"
     openai_image_background: Literal["opaque", "auto"] = "opaque"
@@ -48,12 +42,9 @@ class Settings(BaseSettings):
         description="How many hero-image candidates to request before picking one.",
     )
     openai_image_ranker_model: str = "gpt-4.1-mini"
-<<<<<<< HEAD
     openai_block_refine_model: str = "gpt-4.1-mini"
     openai_block_refine_enabled: bool = True
     block_palette_path: Path = Field(default=Path("./data/block_palette.json"))
-=======
->>>>>>> origin/frontend
 
 
 def get_settings() -> Settings:

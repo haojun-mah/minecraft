@@ -13,17 +13,14 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from storage.sample import build_sample_response  # noqa: E402
+from storage.sample import build_sample_flat_blocks  # noqa: E402
 
 
 def main() -> None:
-    result = build_sample_response(
-        job_id="j_sample01",
-        prompt="a small medieval cottage with a thatched roof",
-    )
+    result = build_sample_flat_blocks()
     out_path = ROOT / "examples" / "sample_response.json"
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    out_path.write_text(json.dumps(result.model_dump(), indent=2) + "\n", encoding="utf-8")
+    out_path.write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
     print(f"wrote {out_path}")
 
 

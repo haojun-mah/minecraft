@@ -2,21 +2,15 @@
 
 Generative-AI backend that turns a text prompt or an uploaded image into a Minecraft block structure. Sends back a compact JSON the frontend mod renders into the world.
 
-<<<<<<< HEAD
 This document is the **API contract** your frontend mod consumes. The backend's pipeline (Exa research, GPT-4o vision planning, OpenAI GPT Image hero generation, Fal Trellis image-to-3D, voxelization, block-mapping) is invisible to you.
-=======
-This document is the **API contract** your frontend mod consumes. The backend's pipeline (Exa research, GPT-4o vision planning, OpenAI GPT Image hero generation, image-to-3D, voxelization, block-mapping) is invisible to you.
->>>>>>> origin/frontend
 
 ## Phase 1 status
 
-The pipeline is **stubbed**: `POST /builds` accepts a real request, walks through the same status stages the real pipeline will, and after a few seconds returns a hard-coded sample response (a small 5x5x5 cottage). `POST /builds/from-image` does the same thing for an uploaded image and stores the upload under `artifacts/` so the frontend can show it immediately. This lets the frontend be built and tested end-to-end before the real generative pipeline lands.
+The pipeline is **forced to a sample**: `POST /builds` accepts a real request and returns a hard-coded 5x5x5 cottage encoded as the existing RLE `BuildResult`. `POST /generate` returns the same cottage as a flat list of `{x, y, z, block}` entries that the frontend mod can place directly.
 
-<<<<<<< HEAD
-A frozen example is committed at [`examples/sample_response.json`](examples/sample_response.json) so the renderer can be developed without running the server at all.
-=======
-A frozen frontend-ready example is committed at [`examples/sample_response.json`](examples/sample_response.json) so the mod can be developed without running the server at all.
->>>>>>> origin/frontend
+A frozen flat-block example is committed at [`examples/sample_response.json`](examples/sample_response.json) so the renderer can be developed without running the server at all.
+
+Current backend behavior is intentionally forced to this frozen sample for frontend integration. The live `/builds` job keeps its own `job_id` / `prompt`, but the final block payload is derived from `examples/sample_response.json`.
 
 ---
 
@@ -25,11 +19,7 @@ A frozen frontend-ready example is committed at [`examples/sample_response.json`
 ```bash
 cd backend
 python -m venv .venv && source .venv/bin/activate
-<<<<<<< HEAD
 pip install -e ".[pipeline,dev]"
-=======
-pip install -e .
->>>>>>> origin/frontend
 cp .env.example .env
 
 uvicorn main:app --reload --host 127.0.0.1 --port 8000
@@ -126,18 +116,24 @@ When `status == "done"`, the response is the **final build result**:
 }
 ```
 
-<<<<<<< HEAD
 For text builds, `hero_image_url` points at the generated hero image under `/static/...`; the frozen sample response keeps it `null` so the example payload stays deterministic.
-=======
-For text builds, `hero_image_url` points at the generated hero image under `/static/...`.
->>>>>>> origin/frontend
 For image uploads, `input_image_url` points at the saved source image under `/static/...`, and `hero_image_url` currently reuses that same static URL in the stub so the frontend can preview the upload immediately.
 
 ### `GET /healthz`
 
 Returns `{ "status": "ok" }`.
 
-<<<<<<< HEAD
+### `POST /generate`
+
+Synchronous frontend helper. It accepts a prompt but currently returns `examples/sample_response.json` directly:
+
+```json
+[
+  { "x": 0, "y": 0, "z": 0, "block": "minecraft:cobblestone" },
+  { "x": 1, "y": 0, "z": 0, "block": "minecraft:cobblestone" }
+]
+```
+
 ### `GET /debug/research?prompt=...`
 
 Runs only the Exa research stage and returns the machine-readable research bundle. This is for backend debugging and for the next pipeline agent to verify the research output before wiring GPT/OpenAI image generation.
@@ -176,8 +172,6 @@ The response intentionally does **not** expose source websites. It returns archi
 }
 ```
 
-=======
->>>>>>> origin/frontend
 ### Errors
 
 - `404 Not Found` — unknown `job_id`.
@@ -238,7 +232,6 @@ See [`pipeline/encode.py`](pipeline/encode.py) `decode_rle_zyx`.
 
 ---
 
-<<<<<<< HEAD
 ## Post-3D Voxelization And Block Mapping
 
 After image-to-3D writes a mesh at:
@@ -247,7 +240,7 @@ After image-to-3D writes a mesh at:
 artifacts/{job_id}/model.glb
 ```
 
-the backend now runs real post-3D processing instead of returning the hard-coded sample:
+the dynamic post-3D code path can run this processing when the forced sample response is removed:
 
 ```text
 model.glb
@@ -405,8 +398,6 @@ Use `research_bundle.json` as the source of truth. A Markdown summary can be gen
 
 ---
 
-=======
->>>>>>> origin/frontend
 ## End-to-end smoke test
 
 ```bash
@@ -423,11 +414,7 @@ curl -s -X POST http://127.0.0.1:8000/builds \
 curl -s http://127.0.0.1:8000/builds/j_xyz | jq .
 ```
 
-<<<<<<< HEAD
-You can also use `examples/sample_response.json` directly to develop the renderer without running the server.
-=======
-You can also use `examples/sample_response.json` directly as a flat `/generate`-style response without running the server.
->>>>>>> origin/frontend
+You can also use `examples/sample_response.json` directly as the same flat response returned by `/generate`.
 
 ---
 
@@ -457,10 +444,6 @@ See the project plan for the full pipeline and phasing. Short version:
 
 - **Phase 1 (current):** Stubbed pipeline, real API contract, sample response, decoder docs.
 - **Phase 2:** OpenAI structured-output direct block generation (no 3D model).
-<<<<<<< HEAD
 - **Phase 3:** Real pipeline — Exa research → GPT-4o vision plan → OpenAI GPT Image hero image → Fal Trellis image-to-3D → voxelize → block map.
-=======
-- **Phase 3:** Real pipeline — Exa research → GPT-4o vision plan → OpenAI GPT Image hero image → image-to-3D → voxelize → block map.
->>>>>>> origin/frontend
 - **Phase 4:** LLM semantic block refinement, isometric preview render, hollow-shell mode.
 - **Phase 5:** SQLite job store, disk caching, retries, Gemini & local fallbacks, structured logs.
